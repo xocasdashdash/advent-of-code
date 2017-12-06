@@ -22,10 +22,14 @@ with open("input", "r") as f:
     mbank = [int(x) for x in f.read().split("\t")]
     print("i", mbank)
     key = "".join([str(x) for x in mbank])
+    for i in range(1, 3):
+        number_of_steps = 0
+        found_inputs = {}
 
-    while found_inputs.get(key, -1) != 1:
-        found_inputs[key] = 1
-        mbank = balance_input(mbank)
-        key = "".join([str(x) for x in mbank])
-        number_of_steps = number_of_steps + 1
+        while found_inputs.get(key, -1) != 1:
+            found_inputs[key] = 1
+            mbank = balance_input(mbank)
+            key = "".join([str(x) for x in mbank])
+            number_of_steps = number_of_steps + 1
+        print(i)
     print("st", number_of_steps)
