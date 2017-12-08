@@ -55,11 +55,13 @@ with open("input", "r") as f:
             node["cw"] = sum(children_weight)
             sw_child = node["cw"]
         else:
+            node["children_balanced"] = True
+
             sw_child = 0
         return w_node + sw_child
     root = saved_programs[parent_program.get('id')]
     mark_unbalanced(root, saved_programs)
-    discrepancy_found = False
+    print(json.dumps(saved_programs))
 
     def is_discrepant(child_node, parent_node):
         return child_node.get('children_balanced', True) != parent_node.get('children_balanced', True) and parent_node.get('id') != parent_node.get('parent')
