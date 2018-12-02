@@ -1,0 +1,6 @@
+[package]
+name = "aoc-01"
+version = "0.1.0"
+authors = ["Joaquín Fernández Campo <jfcampo@gmail.com>"]
+
+[dependencies]
