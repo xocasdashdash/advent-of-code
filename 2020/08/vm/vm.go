@@ -21,11 +21,10 @@ func Run(instructions []parser.Instruction) (int, int, []int) {
 		case "nop":
 			pointer++
 		case "jmp":
-			nextPointer := (pointer + instruction.Modifier)
-			if nextPointer == endInstruction {
-				return accumulator, nextPointer, runnedInstructions
+			pointer = (pointer + instruction.Modifier)
+			if pointer == endInstruction {
+				return accumulator, pointer, runnedInstructions
 			}
-			pointer = nextPointer % len(instructions)
 		}
 		if pointer > maxPointer {
 			maxPointer = pointer
