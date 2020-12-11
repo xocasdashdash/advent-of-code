@@ -23,7 +23,7 @@ var checks int = 0
 
 func main() {
 
-	input, _ := ioutil.ReadFile("testInput")
+	input, _ := ioutil.ReadFile("input")
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
 	m := parseMap(trimmedInput)
 	fmt.Printf("Original map\n***************************\n")
