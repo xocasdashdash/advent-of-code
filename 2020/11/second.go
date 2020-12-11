@@ -9,16 +9,16 @@ import (
 type Seat byte
 type SeatRow []Seat
 type SeatMap []SeatRow
-type Placing struct {
+type Coord struct {
 	Row    int
 	Column int
-	State  Seat
 }
 
 const Occupied = '#'
 const Empty = 'L'
 const Floor = '.'
 
+var neighborCache = make(map[Coord][]Coord)
 var checks int = 0
 
 func main() {
@@ -76,11 +76,17 @@ func evolve(m SeatMap) SeatMap {
 	for r := range m {
 		row := make(SeatRow, 0, len(m[r]))
 		for c := range m[r] {
-			_, occupiedPlacings, _ := candidateNeighbors(m, r, c)
+			neighbors := candidateNeighbors(m, r, c)
+			occupied := 0
+			for _, n := range neighbors {
+				if m[n.Row][n.Column] == Occupied {
+					occupied++
+				}
+			}
 			state := m[r][c]
-			if state == Empty && len(occupiedPlacings) == 0 {
+			if state == Empty && occupied == 0 {
 				state = Occupied
-			} else if state == Occupied && len(occupiedPlacings) >= 5 {
+			} else if state == Occupied && occupied >= 5 {
 				state = Empty
 			}
 			row = append(row, state)
@@ -90,14 +96,15 @@ func evolve(m SeatMap) SeatMap {
 	return evolvedSM
 }
 
-func candidateNeighbors(m SeatMap, row, column int) ([]Placing, []Placing, []Placing) {
+func candidateNeighbors(m SeatMap, row, column int) []Coord {
 
-	empty := make([]Placing, 0, 8)
-	occupied := make([]Placing, 0, 8)
-	floor := make([]Placing, 0, 8)
+	var result []Coord
 	type vector struct {
 		i int
 		j int
+	}
+	if neighborCache[Coord{row, column}] != nil {
+		return neighborCache[Coord{row, column}]
 	}
 	vectors := make([]vector, 0, 8)
 	for i := -1; i < 2; i++ {
@@ -121,32 +128,18 @@ func candidateNeighbors(m SeatMap, row, column int) ([]Placing, []Placing, []Pla
 			checks++
 			if isValidNeighbor(m, candidateRow, candidateColumn) {
 				s := m[candidateRow][candidateColumn]
-				if s == Empty {
-					empty = append(empty, Placing{
-						Row:    candidateRow,
-						Column: candidateColumn,
-						State:  s,
-					})
-				} else if s == Occupied {
-					occupied = append(occupied, Placing{
-						Row:    candidateRow,
-						Column: candidateColumn,
-						State:  s,
-					})
-				} else {
-					floor = append(floor, Placing{
-						Row:    candidateRow,
-						Column: candidateColumn,
-						State:  s,
-					})
+				if s == Floor {
 					newVectors = append(newVectors, v)
+				} else {
+					result = append(result, Coord{candidateRow, candidateColumn})
 				}
 			}
 		}
 		vectors = newVectors
 		multiplier++
 	}
-	return empty, occupied, floor
+	neighborCache[Coord{row, column}] = result
+	return result
 
 }
 func isValidNeighbor(m SeatMap, row, column int) bool {
