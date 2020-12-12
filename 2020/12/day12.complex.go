@@ -7,7 +7,6 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"testing"
 )
 
 type Instruction struct {
@@ -35,17 +34,14 @@ var yMultipliers = map[string]int{
 	"N": 1,
 }
 
-type Coord struct {
-	x, y int
-}
 type ShipPosition struct {
-	p Coord
+	p complex128
 	//Waypoint is relative to the ship's Position
-	Waypoint Coord
+	Waypoint complex128
 }
 
 func (p ShipPosition) String() string {
-	return fmt.Sprintf("X: %+.3d, Y: %+.3d, Waypoint: x:%d, y:%d", p.p.x, p.p.y, p.Waypoint.x, p.Waypoint.y)
+	return fmt.Sprintf("P: %v, Waypoint: %v", p.p, p.Waypoint)
 }
 
 var inputFile = flag.String("f", "input", "Relative file path to use as input.")
@@ -60,18 +56,18 @@ func main() {
 
 	//Part1
 	shipPos := ShipPosition{
-		Coord{0, 0}, Coord{1, 0},
+		0, 1,
 	}
 	for _, i := range instructions {
 		newPosition := EvolveP1(shipPos, i)
 		//fmt.Printf("Position: %+v from %+v after applying %+v\n", newPosition, shipPos, i)
 		shipPos = newPosition
 	}
-	fmt.Printf("Part1: %d\n", int(math.Abs(float64(shipPos.p.x))+math.Abs(float64(shipPos.p.y))))
+	fmt.Printf("Part1: %+v, %d\n", shipPos, int(math.Abs(real(shipPos.p))+math.Abs(imag(shipPos.p))))
 
 	//Part2
 	shipPos = ShipPosition{
-		Coord{0, 0}, Coord{10, 1},
+		0, 10 + 1i,
 	}
 	for _, i := range instructions {
 		newPosition := EvolveP2(shipPos, i)
@@ -79,53 +75,22 @@ func main() {
 		shipPos = newPosition
 	}
 
-	fmt.Printf("Part2: %d", int(math.Abs(float64(shipPos.p.x))+math.Abs(float64(shipPos.p.y))))
+	fmt.Printf("Part2: %+v, %d\n", shipPos, int(math.Abs(real(shipPos.p))+math.Abs(imag(shipPos.p))))
 }
 
-func TestRotateWaypoint(t *testing.T) {
-	type rotTest struct {
-		o, r Coord
-		rot  int
+func RotateWaypoint(o complex128, i Instruction) complex128 {
+	var r complex128
+	r = o
+	if i.Direction == "R" {
+		//If we're going clockwise we need to remap this to going counter clockwise
+		i.Change = 360 - i.Change
 	}
-	rt := []rotTest{
-		{
-			Coord{3, 0}, Coord{0, -3}, 90,
-		},
-		{
-			Coord{1, 1}, Coord{1, -1}, 90,
-		},
-		{
-			Coord{1, 0}, Coord{0, -1}, 90,
-		},
-		{
-			Coord{10, 4}, Coord{10, 4}, 360,
-		},
-		{
-			Coord{10, 4}, Coord{4, -10}, 90,
-		},
+	for j := 0; j < i.Change/90; j++ {
+		//We need to do math like this to avoid issues with floats
+		r *= 1i
 	}
-	for _, r := range rt {
-		c := RotateWaypoint(r.o, Instruction{Direction: "R", Change: r.rot})
-		if c != r.r {
-			t.Errorf("Bad rotation %d . Got %+v, expected %+v from origin: %+v\n", r.rot, c, r.r, r.o)
-			t.Fail()
-		}
-	}
-}
-
-func RotateWaypoint(o Coord, i Instruction) Coord {
-	if i.Direction == "L" {
-		i.Change *= -1
-	}
-	radiantChange := float64(i.Change) * math.Pi / 180
-	cosChange := int(math.Cos(radiantChange))
-	sinChange := int(math.Sin(radiantChange))
-	newX := o.x*cosChange + o.y*sinChange
-	newY := -1*o.x*sinChange + o.y*cosChange
-	return Coord{
-		x: newX,
-		y: newY,
-	}
+	//fmt.Printf("S: %+v, R: %+v, Angle: %+v, D: %s\n", o, r, i.Change, i.Direction)
+	return r
 }
 func EvolveP2(ship ShipPosition, i Instruction) ShipPosition {
 
@@ -134,14 +99,9 @@ func EvolveP2(ship ShipPosition, i Instruction) ShipPosition {
 		ship.Waypoint = RotateWaypoint(ship.Waypoint, i)
 		//fmt.Printf("New waypoint: %+v after rotation\n", ship.Waypoint)
 	case "F":
-		ship.p = Coord{
-			x: ship.p.x + i.Change*ship.Waypoint.x,
-			y: ship.p.y + i.Change*ship.Waypoint.y,
-		}
-		//fmt.Printf("Moved ship to position: %+v\n", ship.p)
+		ship.p += complex(float64(i.Change), 0) * ship.Waypoint
 	default:
-		ship.Waypoint.y = ship.Waypoint.y + yMultipliers[i.Direction]*i.Change
-		ship.Waypoint.x = ship.Waypoint.x + xMultipliers[i.Direction]*i.Change
+		ship.Waypoint += complex(float64(xMultipliers[i.Direction]*i.Change), float64(yMultipliers[i.Direction]*i.Change))
 		//fmt.Printf("New waypoint: %+v after moving it\n", ship.Waypoint)
 	}
 	return ship
@@ -155,12 +115,12 @@ func EvolveP1(c ShipPosition, i Instruction) ShipPosition {
 		c.Waypoint = RotateWaypoint(c.Waypoint, i)
 		return c
 	case "F":
-		c.p.x = c.p.x + c.Waypoint.x*i.Change
-		c.p.y = c.p.y + c.Waypoint.y*i.Change
+		c.p += c.Waypoint * complex(float64(i.Change), 0)
 	default:
-		c.p.x = c.p.x + xMultipliers[i.Direction]*i.Change
-		c.p.y = c.p.y + yMultipliers[i.Direction]*i.Change
+		c.p += complex(float64(xMultipliers[i.Direction]*i.Change), float64(yMultipliers[i.Direction]*i.Change))
 	}
+
+	//fmt.Printf("Change X: %d, Change y: %d\n", xMultiplier*i.Change, yMultiplier*i.Change)
 	return c
 }
 func parseInstructions(directions []string) []Instruction {
