@@ -29,15 +29,13 @@ func main() {
 	fmt.Printf("Original map\n***************************\n")
 	printMap(m)
 	fmt.Printf("\n***************************\n")
-	checksum := checkSumMap(m)
+	var changed bool
 	for {
-		m = evolve(m)
-		newCheckSum := checkSumMap(m)
-		if checksum == newCheckSum {
+		m, changed = evolve(m)
+		if !changed {
 			fmt.Printf("\n*Stabilized*\n")
 			break
 		}
-		checksum = newCheckSum
 	}
 	fmt.Printf("\nFinal map \n")
 	printMap(m)
@@ -71,8 +69,9 @@ func checkSumMap(m SeatMap) string {
 	}
 	return string(result)
 }
-func evolve(m SeatMap) SeatMap {
+func evolve(m SeatMap) (SeatMap, bool) {
 	evolvedSM := make(SeatMap, 0, len(m))
+	var changed bool
 	for r := range m {
 		row := make(SeatRow, 0, len(m[r]))
 		for c := range m[r] {
@@ -86,14 +85,16 @@ func evolve(m SeatMap) SeatMap {
 			state := m[r][c]
 			if state == Empty && occupied == 0 {
 				state = Occupied
+				changed = true
 			} else if state == Occupied && occupied >= 5 {
 				state = Empty
+				changed = true
 			}
 			row = append(row, state)
 		}
 		evolvedSM = append(evolvedSM, row)
 	}
-	return evolvedSM
+	return evolvedSM, changed
 }
 
 func candidateNeighbors(m SeatMap, row, column int) []Coord {
