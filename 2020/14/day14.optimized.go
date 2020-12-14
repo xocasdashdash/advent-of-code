@@ -54,7 +54,6 @@ func main() {
 	t := time.Now()
 	vm.Run()
 	fmt.Printf("Took: %s\n", time.Since(t))
-
 	sum = 0
 	for _, v := range vm.Registries {
 		sum += v
@@ -87,28 +86,23 @@ func v2(address []byte, value []byte) Operation {
 	return func(vm *VM) {
 		v, _ := strconv.Atoi(string(value))
 		a, _ := strconv.Atoi(string(address))
-		addresses := make([]int, 1, 100)
+		addresses := make([]int, 1, 512)
 		var bit int
 		for k, b := range vm.BitMask {
-			if b == '1' {
-				bit = 1
-			} else if b == '0' {
-				bit = a >> k & 0x01
-				if bit == 0 {
-					//If it's a 0 we don't need to add a new number
-					continue
-				}
-			} else {
-				currentAddresses := len(addresses)
-				for i := 0; i < currentAddresses; i++ {
-					add := addresses[i] + (2 << (k) / 2)
-					addresses = append(addresses, add)
-				}
+			bit = a >> k & 0x01
+			if b == '0' && bit == 0 {
 				continue
 			}
-			for j := range addresses {
-				add := bit * (2 << (k) / 2)
-				addresses[j] += add
+			currentAddresses := len(addresses)
+			if b == 'X' {
+				//We duplicate the list
+				addresses = append(addresses, addresses...)
+			}
+			// At this point bit is either 1 and b == 0 or it's 1 and b = X (we duplicated) or 1.
+			// So it's a constant
+			factor := (2 << (k) / 2)
+			for j := 0; j < currentAddresses; j++ {
+				addresses[j] += factor
 			}
 		}
 		for _, address := range addresses {
