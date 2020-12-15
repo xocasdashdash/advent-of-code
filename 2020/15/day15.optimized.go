@@ -23,10 +23,10 @@ func main() {
 	if *debug {
 		fmt.Printf("Input numbers: %+v\n", numbers)
 	}
-	//This is a map of the number and an array
-	//of length 2. The first position holds the last
-	//time the number was said out loud, and the second one holds
-	//the number of times it was said.
+	//This is a list of every number we can possible see
+	//As the value is the difference between the
+	//current list pointer and the last seen location
+	//The worst case would be length - 1 which is < length.
 	seen := make([]int, *t, *t)
 	lastNumberSpoken := 0
 	for i := range numbers {
@@ -44,7 +44,16 @@ func main() {
 	t0 := time.Now()
 	for j = len(numbers); j < *t; j++ {
 		lastNumber = numberToSay
+		/*
+			This is a more compact way of expressing the
+			same thing. Mostly for documentation purposes.
 
+				n = seen[lastNumber]
+				if n == 0 {
+					n = j + 1
+				}
+				numberToSay = j + 1 - n
+		*/
 		if n = seen[lastNumber]; n != 0 {
 			numberToSay = j + 1 - n
 		} else {
@@ -56,7 +65,7 @@ func main() {
 		}
 	}
 	fmt.Printf("Took %s\n", time.Since(t0))
-	fmt.Printf("Max number: %d", maxNumber)
+	fmt.Printf("Max number: %d\n", maxNumber)
 	fmt.Printf("Number at %d: %d \n", *t, lastNumber)
 
 }
