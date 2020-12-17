@@ -40,7 +40,6 @@ func main() {
 		points = evolve(points, true)
 		fmt.Printf("Active after iteration %d: %d\n", i+1, len(points))
 	}
-
 	fmt.Printf("Took %s|", time.Since(t))
 	fmt.Printf("Checks for part 2: %d|", checks)
 	fmt.Printf("Active points after %d: %d", *iterations, len(points))
@@ -51,11 +50,31 @@ func evolve(allPoints map[Point]bool, enableFourthDimension bool) map[Point]bool
 
 	result := make(map[Point]bool)
 	var candidateToSwitch []Point
+	solved := make(map[Point]bool)
+
 	for p := range allPoints {
-		allNeighbors, _ := neighbors(allPoints, p, enableFourthDimension)
+		allNeighbors, totalInactiveNeighbors := neighbors(allPoints, p, enableFourthDimension)
 		candidateToSwitch = append(candidateToSwitch, allNeighbors...)
+		solved[p] = true
+		if len(allNeighbors)-totalInactiveNeighbors != 2 && len(allNeighbors)-totalInactiveNeighbors != 3 {
+			continue
+		}
+		numberOfActiveNeighbors := len(allNeighbors) - totalInactiveNeighbors
+		if allPoints[p] == true {
+			result[p] = active
+			//keep active
+		} else if numberOfActiveNeighbors == 3 {
+			//Flip from inactive to active
+			result[p] = active
+		}
 	}
 	for _, p := range candidateToSwitch {
+		//We keep a cache of solved points in order to avoid
+		//Re doing them.
+		if _, ok := solved[p]; ok {
+			continue
+		}
+		solved[p] = true
 		allNeighbors, totalInactiveNeighbors := neighbors(allPoints, p, enableFourthDimension)
 		if len(allNeighbors)-totalInactiveNeighbors != 2 && len(allNeighbors)-totalInactiveNeighbors != 3 {
 			continue
