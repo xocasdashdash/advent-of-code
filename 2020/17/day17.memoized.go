@@ -84,7 +84,6 @@ func evolve(allPoints map[Point]bool, enableFourthDimension bool) map[Point]bool
 
 	result := make(map[Point]bool, len(allPoints))
 	var candidateToSwitch []Point
-	solvedPoints := make(map[Point]bool)
 	visitedPoints := make(map[Point]bool)
 	//We solve the current universe
 	for p := range allPoints {
@@ -101,12 +100,10 @@ func evolve(allPoints map[Point]bool, enableFourthDimension bool) map[Point]bool
 		}
 		if allPoints[p] == true {
 			result[p] = active
-			solvedPoints[p] = true
 			//keep active
 		} else if activeNeighbors == 3 {
 			//Flip from inactive to active
 			result[p] = active
-			solvedPoints[p] = true
 		}
 	}
 	return result
