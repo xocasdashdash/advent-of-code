@@ -1,0 +1,276 @@
+package main
+
+import (
+	"fmt"
+	"runtime"
+	"runtime/debug"
+	"strconv"
+	"strings"
+)
+
+//Expression An expression
+type Expression struct {
+	Operation       string
+	LeftExpression  *Expression
+	RightExpression *Expression
+	Value           int
+	HasValue        bool
+}
+
+func (e *Expression) Run() int {
+
+	var leftSide int
+	var rightSide int
+
+	if e.LeftExpression != nil {
+		leftSide = e.LeftExpression.Run()
+	}
+	if e.RightExpression != nil {
+		rightSide = e.RightExpression.Run()
+	}
+	if e.Operation == "*" {
+		fmt.Printf("|%d*%d|", leftSide, rightSide)
+		return leftSide * rightSide
+	} else if e.Operation == "+" {
+		fmt.Printf("|%d+%d|", leftSide, rightSide)
+		return leftSide + rightSide
+	}
+
+	return e.Value
+}
+func (e *Expression) String() string {
+
+	if e.LeftExpression == nil && e.RightExpression == nil && e.HasValue {
+		return fmt.Sprintf("%d", e.Value)
+	}
+	if e.LeftExpression == nil {
+		if e.HasValue {
+			return fmt.Sprintf("%s %s %d", e.RightExpression, e.Operation, e.Value)
+		}
+		return fmt.Sprintf("%s", e.RightExpression)
+	}
+	if e.RightExpression == nil {
+		if e.HasValue {
+			return fmt.Sprintf("%d %s %s", e.Value, e.Operation, e.LeftExpression)
+		}
+		return fmt.Sprintf("%s", e.LeftExpression)
+	}
+	if e.LeftExpression != nil && e.RightExpression != nil {
+		return fmt.Sprintf("%s %s %s", e.LeftExpression, e.Operation, e.RightExpression)
+	}
+	if e == nil {
+		return ""
+	}
+	fmt.Printf("BAD LE: %v, RE: %v,Operation: %s,VAlue: %d, hasValue: %v\n",
+		e.LeftExpression == nil,
+		e.RightExpression == nil,
+		e.Operation, e.Value, e.HasValue)
+	return ""
+}
+
+//Parse parses a string
+func Parse(input string) (*Expression, error) {
+	for c := range Lex(input) {
+		fmt.Printf("%#v\n", c)
+
+	}
+	parser := newParser(Lex(input))
+	return parser.Parse()
+}
+
+type parser struct {
+	tokens <-chan Token
+
+	lookahead [2]Token
+	peekCount int
+}
+
+// recover is the handler that turns panics into returns from the top level of Parse.
+func (p *parser) recover(errp *error) {
+	e := recover()
+	if e != nil {
+		if _, ok := e.(runtime.Error); ok {
+			panic(e)
+		}
+		*errp = e.(error)
+	}
+	return
+}
+func newParser(tokens <-chan Token) *parser {
+	return &parser{
+		tokens: tokens,
+	}
+}
+func (p *parser) Parse() (expression *Expression, err error) {
+	// Parsing uses panics to bubble up errors
+	defer p.recover(&err)
+	expression = p.expressionStatement()
+
+	return
+}
+
+func (p *parser) nextToken() Token {
+	return <-p.tokens
+}
+
+// next returns the next token.
+func (p *parser) next() Token {
+	if p.peekCount > 0 {
+		p.peekCount--
+	} else {
+		p.lookahead[0] = p.nextToken()
+	}
+	return p.lookahead[p.peekCount]
+}
+
+// backup backs the input stream up one token.
+func (p *parser) backup() {
+	p.peekCount++
+}
+
+// peek returns but does not consume the next token.
+func (p *parser) peek() Token {
+	if p.peekCount > 0 {
+		return p.lookahead[p.peekCount-1]
+	}
+	p.peekCount = 1
+	p.lookahead[1] = p.lookahead[0]
+	p.lookahead[0] = p.nextToken()
+	return p.lookahead[0]
+}
+
+// errorf formats the error and terminates processing.
+func (p *parser) errorf(format string, args ...interface{}) {
+	format = fmt.Sprintf("parser: %s", format)
+	panic(fmt.Errorf(format, args...))
+}
+
+// expect consumes the next token and guarantees it has the required type.
+func (p *parser) expect(expected TokenType) Token {
+	t := p.next()
+	if t.Type != expected {
+		debug.PrintStack()
+		p.unexpected(t, expected)
+	}
+	return t
+}
+
+// unexpected complains about the token and terminates processing.
+func (p *parser) unexpected(tok Token, expected ...TokenType) {
+	expectedStrs := make([]string, len(expected))
+	for i := range expected {
+		expectedStrs[i] = fmt.Sprintf("%q", expected[i])
+	}
+	expectedStr := strings.Join(expectedStrs, ",")
+	debug.PrintStack()
+	p.errorf("unexpected token %q with value %q at line %d char %d, expected: %s", tok.Type, tok.Value, tok.Pos.Line, tok.Pos.Char, expectedStr)
+}
+
+// error terminates processing.
+func (p *parser) error(err error) {
+	p.errorf("%s", err)
+}
+
+func (p *parser) expressionStatement() *Expression {
+	var expr *Expression
+	defer func() {
+		if expr != nil {
+			fmt.Printf("Parsed expresion |%s|\n", expr)
+		}
+	}()
+	for {
+		switch p.peek().Type {
+		case TokenEOF:
+			return expr
+		case TokenRParenthesis:
+			return expr
+		case TokenLParenthesis:
+			if expr == nil {
+				return p.parenthesesStatement()
+			}
+			if expr.LeftExpression == nil {
+				expr.LeftExpression = p.parenthesesStatement()
+			} else if expr.RightExpression == nil {
+				expr.RightExpression = p.parenthesesStatement()
+			}
+		case TokenMultiplication:
+			if expr.Operation == "" {
+				expr.Operation = "*"
+			}
+			if expr.LeftExpression != nil && expr.RightExpression != nil {
+				expr = &Expression{
+					LeftExpression:  expr,
+					Operation:       "*",
+					RightExpression: p.multiplicationStatement(),
+				}
+				return expr
+			}
+			if expr.LeftExpression == nil {
+				expr.LeftExpression = p.multiplicationStatement()
+			} else if expr.RightExpression == nil {
+				expr.RightExpression = p.multiplicationStatement()
+			}
+		case TokenAddition:
+			if expr.Operation == "" {
+				expr.Operation = "+"
+			}
+			if expr.LeftExpression != nil && expr.RightExpression != nil {
+				expr = &Expression{
+					LeftExpression:  expr,
+					Operation:       "+",
+					RightExpression: p.additionStatement(),
+				}
+				return expr
+			}
+			if expr.LeftExpression == nil {
+				expr.LeftExpression = p.additionStatement()
+			} else if expr.RightExpression == nil {
+				expr.RightExpression = p.additionStatement()
+			}
+		case TokenNumber:
+			tok := p.next()
+			value, err := strconv.Atoi(tok.Value)
+			if err != nil {
+				panic(err)
+			}
+			if expr == nil {
+				expr = &Expression{}
+			}
+			valueExpression := &Expression{
+				Value:    value,
+				HasValue: true,
+			}
+			if expr.LeftExpression == nil {
+				expr.LeftExpression = valueExpression
+			} else {
+				expr.RightExpression = valueExpression
+			}
+
+		default:
+			p.unexpected(p.next(), TokenEOF, TokenLParenthesis)
+		}
+	}
+}
+func (p *parser) multiplicationStatement() *Expression {
+	p.expect(TokenMultiplication)
+	e := p.expressionStatement()
+	if e.RightExpression != nil && e.RightExpression.LeftExpression != nil && e.RightExpression.RightExpression == nil {
+		e.RightExpression = e.RightExpression.LeftExpression
+	}
+	return e
+}
+func (p *parser) additionStatement() *Expression {
+	p.expect(TokenAddition)
+	e := p.expressionStatement()
+	if e.RightExpression != nil && e.RightExpression.LeftExpression != nil && e.RightExpression.RightExpression == nil {
+		e.RightExpression = e.RightExpression.LeftExpression
+	}
+	return e
+}
+
+func (p *parser) parenthesesStatement() *Expression {
+	p.expect(TokenLParenthesis)
+	e := p.expressionStatement()
+	p.expect(TokenRParenthesis)
+	return e
+}
