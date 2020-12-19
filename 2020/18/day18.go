@@ -35,9 +35,7 @@ func main() {
 			sum += value
 		}
 	}
-	if sum != 0 {
-		fmt.Printf("Part1: %d\n", sum)
-	}
+	fmt.Printf("Part1: %d\n", sum)
 	sum = 0
 	for _, h := range homework {
 		if *debugFlag {
@@ -56,9 +54,7 @@ func main() {
 			}
 		}
 	}
-	if sum != 0 {
-		fmt.Printf("Part2: %d\n", sum)
-	}
+	fmt.Printf("Part2: %d\n", sum)
 
 }
 

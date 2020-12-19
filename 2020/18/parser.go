@@ -123,7 +123,7 @@ func (p *parser) advancedMath() int {
 			return result
 		case TokenLParenthesis:
 			v := p.parenthesisSentence()
-			if currentOp != "+" {
+			if currentOp == "*" {
 				if result == 0 {
 					result = 1
 				}
@@ -137,9 +137,7 @@ func (p *parser) advancedMath() int {
 			if result == 0 {
 				result = 1
 			}
-			r := p.advancedMath()
-			//fmt.Printf("%d * %d\n", result, r)
-			result *= r
+			result *= p.advancedMath()
 		case TokenAddition:
 			p.next()
 			currentOp = "+"
@@ -152,11 +150,8 @@ func (p *parser) advancedMath() int {
 			}
 			if result == 0 {
 				result = value
-			} else if currentOp != "" {
-				//fmt.Printf("%d %s %d\n", result, currentOp, value)
-				if currentOp == "+" {
-					result += value
-				}
+			} else if currentOp == "+" {
+				result += value
 			}
 		default:
 			p.unexpected(p.next(), TokenEOF, TokenLParenthesis)
@@ -199,15 +194,12 @@ func (p *parser) simpleMath() int {
 			if err != nil {
 				panic(err)
 			}
-			if result == 0 {
-				result = value
+			if currentOp == "*" {
+				result *= value
 			} else {
-				if currentOp == "*" {
-					result *= value
-				} else {
-					result += value
-				}
+				result += value
 			}
+
 		default:
 			p.unexpected(p.next(), TokenEOF, TokenLParenthesis)
 		}

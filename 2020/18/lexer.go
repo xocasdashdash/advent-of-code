@@ -185,23 +185,17 @@ func lexToken(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case unicode.IsDigit(r):
-			//fmt.Printf("Digit: %c\n", r)
 			l.backup()
 			return lexNumberDigits
 		case unicode.IsSpace(r):
-			//fmt.Printf("Space: %c\n", r)
 			l.ignore()
 		case r == '(':
-			//fmt.Printf("LParent: %c\n", r)
 			l.emit(TokenLParenthesis)
 		case r == ')':
-			//fmt.Printf("RParent: %c\n", r)
 			l.emit(TokenRParenthesis)
 		case r == '*':
-			//fmt.Printf("Mult: %c\n", r)
 			l.emit(TokenMultiplication)
 		case r == '+':
-			//fmt.Printf("Add: %c\n", r)
 			l.emit(TokenAddition)
 		case r == eof:
 			l.emit(TokenEOF)
