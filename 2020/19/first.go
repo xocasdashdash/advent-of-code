@@ -25,15 +25,12 @@ type Rule struct {
 func (r Rule) MatchBranch(rList []*Rule, input string) (bool, string) {
 	matches := false
 	pendingMatchText := input
-	matchingChars := 0
 	for _, localRule := range rList {
 		//fmt.Printf("Applying rule(%d) - '%s' for input '%s'\n", localRule.ruleID, localRule.String(), inputToMatch)
-		i := pendingMatchText
-		matches, pendingMatchText = localRule.MatchText(input[matchingChars:])
+		matches, pendingMatchText = localRule.MatchText(pendingMatchText)
 		if !matches {
 			return matches, ""
 		}
-		matchingChars += len(i) - len(pendingMatchText)
 	}
 	return matches, pendingMatchText
 }

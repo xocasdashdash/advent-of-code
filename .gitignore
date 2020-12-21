@@ -101,5 +101,6 @@ ENV/
 .mypy_cache/
 
 \.vscode
-first
+first$
 second
+liz*go
