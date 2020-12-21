@@ -167,28 +167,6 @@ func parseRule(parsedRules map[int]*Rule, ruleID int) *Rule {
 		}
 		rule.rules = append(rule.rules, groupRules)
 	}
-	return rule
-	if strings.Index(r.OriginalExpression, "|") == -1 && strings.Index(r.OriginalExpression, " ") == -1 {
-		candidateID, err := strconv.Atoi(r.OriginalExpression)
-		if err == nil {
-			//If it's a single value we can ignore the rule and just map it to the reference
-			var parsedRule *Rule
-			var ok bool
-			parsedRule, ok = parsedRules[candidateID]
-			if !ok || parsedRule.parsed == false {
-				parsedRule = parseRule(parsedRules, candidateID)
-			}
-			g := make([][]*Rule, 1, 1)
-			g[0] = []*Rule{parsedRule}
-			return &Rule{
-				ruleID:             ruleID,
-				OriginalExpression: r.OriginalExpression,
-				parsed:             true,
-				rules:              g,
-			}
-		}
-
-	}
 
 	return rule
 }

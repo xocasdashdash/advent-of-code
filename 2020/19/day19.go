@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var inputFile = flag.String("f", "input", "Relative file path to use as input.")
+var inputFile = flag.String("f", "minimalInput", "Relative file path to use as input.")
 var ruleToCheck = flag.String("r", "0", "Use this rule to check")
 
 //Rule A rule.
@@ -22,40 +22,42 @@ type Rule struct {
 }
 
 //MatchBranch recursively iterates through a string and validates a rule
-func (r Rule) MatchBranch(rList []*Rule, input string) (bool, string) {
-	matches := false
-	pendingMatchText := input
+func (r Rule) MatchBranch(rList []*Rule, input string) []string {
+	potentialMatches := []string{input}
 	for _, localRule := range rList {
-		//fmt.Printf("Applying rule(%d) - '%s' for input '%s'\n", localRule.ruleID, localRule.String(), inputToMatch)
-		matches, pendingMatchText = localRule.MatchText(pendingMatchText)
-		if !matches {
-			return matches, ""
+		var newPotentialMatches []string
+		for _, m := range potentialMatches {
+			matches := localRule.MatchText(m)
+			for _, v := range matches {
+				newPotentialMatches = append(newPotentialMatches, v)
+			}
 		}
+		potentialMatches = newPotentialMatches
+		//fmt.Printf("Applying rule(%d) - '%s' for input '%s'\n", localRule.ruleID, localRule.String(), inputToMatch)
 	}
-	return matches, pendingMatchText
+	return potentialMatches
 }
 
 var maxDepthForRule = make(map[int]map[string]int, 10)
 
 //MatchText Matches text
-func (r Rule) MatchText(input string) (matches bool, leftOverString string) {
+func (r Rule) MatchText(input string) (matchedStrings []string) {
 
+	if r.ruleID == "11" {
+		fmt.Printf("")
+	}
 	if len(r.LRule) > 0 {
-		matches, leftOverString = r.MatchBranch(r.LRule, input)
-		if matches {
-			return
-		}
+		matchedStrings = r.MatchBranch(r.LRule, input)
 	}
 	if len(r.RRule) > 0 {
-		matches, leftOverString = r.MatchBranch(r.RRule, input)
-		if matches {
-			return
-		}
+		rMatches := r.MatchBranch(r.RRule, input)
+		matchedStrings = append(matchedStrings, rMatches...)
 	}
 
 	if len(r.RRule) == 0 && len(r.LRule) == 0 && input != "" {
-		matches = input[:1] == r.value
-		leftOverString = input[1:]
+		if input[:1] == r.value {
+			matchedStrings = []string{input[1:]}
+		}
 	}
 	return
 
@@ -103,9 +105,11 @@ func main() {
 	system = parse(trimmedInput)
 	P1 := parseRule(system.Rules, *ruleToCheck)
 	for _, m := range system.Messages {
-		match, unmatchedChars := P1.MatchText(m)
-		if match && len(unmatchedChars) == 0 {
-			validMessages++
+		match := P1.MatchText(m)
+		for _, v := range match {
+			if len(v) == 0 {
+				validMessages++
+			}
 		}
 	}
 	fmt.Printf("Part1: %d\n", validMessages)
@@ -124,9 +128,11 @@ func main() {
 	testMatcher := regexp.MustCompile(fmt.Sprintf("^%s$", ruleP2.regexWithLimit(0, 13)))
 	part2Regex := 0
 	for _, m := range system.Messages {
-		match, unmatchedChars := ruleP2.MatchText(m)
-		if match && len(unmatchedChars) == 0 {
-			validMessages++
+		match := ruleP2.MatchText(m)
+		for _, v := range match {
+			if len(v) == 0 {
+				validMessages++
+			}
 		}
 		if testMatcher.MatchString(m) {
 			part2Regex++
