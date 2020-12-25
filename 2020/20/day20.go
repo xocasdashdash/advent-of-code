@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -242,11 +241,7 @@ func (t *Tile) getAllPossibleSides() []int {
 		}
 		t.flipTile()
 	}
-	uniqueResult := uniqueInts(result)
 	sort.Ints(result)
-	if len(uniqueResult) != len(result) {
-		runtime.Breakpoint()
-	}
 	return result
 
 }
@@ -346,18 +341,15 @@ func buildTilemap(startTile int, tilemap map[int]Tile) map[int]Tile {
 	visitList := []int{startTile}
 
 	startingTile := tilemap[startTile]
-	startingTile.flipTile()
-	startingTile.rotateTile()
-	startingTile.rotateTile()
 	tilemap[startTile] = startingTile
 	for len(visitedTiles) != len(tilemap) {
 		//fmt.Printf("Next visit: %+v\n", visitList)
 		var nextVisitList []int
 		if len(visitList) == 0 {
 			//fmt.Printf("%+v", visitedTiles)
-			for tId := range tilemap {
-				if _, ok := visitedTiles[tId]; !ok {
-					fmt.Printf("Did not visit %d\n", tId)
+			for tID := range tilemap {
+				if _, ok := visitedTiles[tID]; !ok {
+					fmt.Printf("Did not visit %d\n", tID)
 				}
 			}
 			panic("Bad")
@@ -380,11 +372,11 @@ func buildTilemap(startTile int, tilemap map[int]Tile) map[int]Tile {
 					//fmt.Printf("Skipping %d as we already visited it\n", neighborID)
 					continue
 				}
-				nextVisitList = append(nextVisitList, neighborID)
 				currentNeighbor := tilemap[neighborID]
 				if len(currentNeighbor.neighborConfiguration) == len(currentNeighbor.neighborIDs) {
 					continue
 				}
+				nextVisitList = append(nextVisitList, neighborID)
 				var matchError error
 				for _, border := range borders {
 					if currentNeighbor.neighborConfiguration != nil {
@@ -474,8 +466,8 @@ func findPossibleNeighbors(tilemap map[int]Tile) map[int]Tile {
 				checks++
 				if tileSidesHashMap[neighboneighborSide] {
 					//Found a neighbor
-					foundNeighbors[t.ID] = uniqueInts(append(foundNeighbors[t.ID], possibleNeighbor.ID))
-					foundNeighbors[possibleNeighbor.ID] = uniqueInts(append(foundNeighbors[possibleNeighbor.ID], t.ID))
+					foundNeighbors[t.ID] = append(foundNeighbors[t.ID], possibleNeighbor.ID)
+					foundNeighbors[possibleNeighbor.ID] = append(foundNeighbors[possibleNeighbor.ID], t.ID)
 					break
 				}
 			}
@@ -483,7 +475,7 @@ func findPossibleNeighbors(tilemap map[int]Tile) map[int]Tile {
 	}
 	for tID, n := range foundNeighbors {
 		t := tilemap[tID]
-		t.neighborIDs = n
+		t.neighborIDs = uniqueInts(n)
 		tilemap[tID] = t
 	}
 	return tilemap
@@ -511,12 +503,12 @@ func main() {
 
 	tiles = buildTilemap(tiles[1427].ID, tiles)
 	fmt.Printf("Checks :%d\n", checks)
-	for _, t := range tiles {
-		fmt.Printf("%d - \nNeighbors:\n", t.ID)
-		for side, neighbor := range t.neighborConfiguration {
-			fmt.Printf("\t%s - %d\n", side, neighbor)
-		}
-	}
+	// for _, t := range tiles {
+	// 	fmt.Printf("%d - \nNeighbors:\n", t.ID)
+	// 	for side, neighbor := range t.neighborConfiguration {
+	// 		fmt.Printf("\t%s - %d\n", side, neighbor)
+	// 	}
+	// }
 }
 
 var allSides = make(map[int][]int)
