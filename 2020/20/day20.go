@@ -54,21 +54,56 @@ type Tile struct {
 	rotations             int
 	flipped               bool
 	sideSignatures        map[string]map[bool]int
+
+	minRowPos int
+	maxRowPos int
+	minColPos int
+	maxColPos int
 }
 
 func (t Tile) String() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Tile %d:\n", t.ID))
-	for row := 0; row <= 9; row++ {
-		for col := 0; col <= 9; col++ {
+	sb.WriteString(fmt.Sprintf("Min position: %d,%d | Max position: %d,%d\n", t.minRowPos, t.minColPos, t.maxRowPos, t.maxColPos))
+
+	sb.WriteString(" " + strings.Repeat("-", t.maxRowPos-t.minRowPos+2))
+	sb.WriteString("\n")
+	for row := t.minRowPos; row <= t.maxRowPos; row++ {
+		sb.WriteString("|")
+		for col := t.minColPos; col <= t.maxColPos; col++ {
 			if t.image[Bit{Row: row, Col: col}] {
 				sb.WriteString("#")
 			} else {
 				sb.WriteString(".")
 			}
 		}
+		sb.WriteString("|")
 		sb.WriteString("\n")
 	}
+	sb.WriteString(" " + strings.Repeat("-", t.maxRowPos-t.minRowPos+2))
+	sb.WriteString("\n")
+	return sb.String()
+}
+func (t Tile) PrintTile() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Tile %d:\n", t.ID))
+	sb.WriteString(" " + strings.Repeat("-", t.maxRowPos-t.minRowPos+2))
+	sb.WriteString("\n")
+
+	for row := t.maxRowPos; row >= t.minRowPos; row-- {
+		sb.WriteString("|")
+		for col := t.minColPos; col <= t.maxColPos; col++ {
+			if t.image[Bit{Row: row, Col: col}] {
+				sb.WriteString("#")
+			} else {
+				sb.WriteString(".")
+			}
+		}
+		sb.WriteString("|")
+		sb.WriteString("\n")
+	}
+	sb.WriteString(" " + strings.Repeat("-", t.maxRowPos-t.minRowPos+2))
+	sb.WriteString("\n")
 	return sb.String()
 }
 
@@ -160,6 +195,22 @@ func (t *Tile) printSides() {
 		//t.rotateTile()
 	}
 }
+
+func (t *Tile) stripSides() {
+	newBitMap := make(map[Bit]bool, len(t.image))
+	var row, col int
+	for row = t.minRowPos + 1; row <= (t.maxRowPos - 1); row++ {
+		for col = t.minColPos + 1; col <= (t.maxColPos - 1); col++ {
+			key := Bit{Col: col, Row: row}
+			remappedKey := Bit{Col: col - 1, Row: row - 1}
+			newBitMap[remappedKey] = t.image[key]
+		}
+	}
+	t.maxRowPos = t.maxRowPos - 2
+	t.maxColPos = t.maxColPos - 2
+	t.image = newBitMap
+
+}
 func (t *Tile) flipTile() error {
 	if t.locked {
 		return fmt.Errorf(fmt.Sprintf("Tile with id %d, is locked. Cannot modify configuration", t.ID))
@@ -174,11 +225,7 @@ func (t *Tile) flipTile() error {
 				Row: 9 - r,
 				Col: c,
 			}
-			if currentBit {
-				newBitMap[nextKey] = true
-			} else {
-				newBitMap[nextKey] = false
-			}
+			newBitMap[nextKey] = currentBit
 		}
 	}
 	t.image = newBitMap
@@ -190,7 +237,7 @@ type borderFunc func() int
 func (t *Tile) topNeighborFunc() int {
 
 	result := 0
-	for col := 0; col <= 9; col++ {
+	for col := t.minColPos; col <= t.maxColPos; col++ {
 		keyToCheck := Bit{Row: 0, Col: col}
 		if t.image[keyToCheck] {
 			result += 1 << col
@@ -202,7 +249,7 @@ func (t *Tile) topNeighborFunc() int {
 func (t *Tile) bottomNeighborFunc() int {
 
 	result := 0
-	for col := 0; col <= 9; col++ {
+	for col := t.minColPos; col <= t.maxColPos; col++ {
 		keyToCheck := Bit{Row: 9, Col: col}
 		if t.image[keyToCheck] {
 			result += 1 << col
@@ -213,7 +260,7 @@ func (t *Tile) bottomNeighborFunc() int {
 
 func (t *Tile) rightNeighborFunc() int {
 	result := 0
-	for row := 0; row <= 9; row++ {
+	for row := t.minRowPos; row <= t.maxRowPos; row++ {
 		keyToCheck := Bit{Row: row, Col: 9}
 		if t.image[keyToCheck] {
 			result += 1 << row
@@ -223,7 +270,7 @@ func (t *Tile) rightNeighborFunc() int {
 }
 func (t *Tile) leftNeighborFunc() int {
 	result := 0
-	for row := 0; row <= 9; row++ {
+	for row := t.minRowPos; row <= t.maxRowPos; row++ {
 		keyToCheck := Bit{Row: row, Col: 0}
 		if t.image[keyToCheck] {
 			result += 1 << row
@@ -339,8 +386,10 @@ func buildTilemap(startTile int, tilemap map[int]Tile) map[int]Tile {
 
 	visitedTiles := make(map[int]bool)
 	visitList := []int{startTile}
-
 	startingTile := tilemap[startTile]
+	startingTile.rotateTile()
+	startingTile.flipTile()
+	startingTile.rotateTile()
 	tilemap[startTile] = startingTile
 	for len(visitedTiles) != len(tilemap) {
 		//fmt.Printf("Next visit: %+v\n", visitList)
@@ -502,13 +551,170 @@ func main() {
 	//fmt.Printf("Corners: %+v\n", uniqueInts(corners))
 
 	tiles = buildTilemap(tiles[1427].ID, tiles)
-	fmt.Printf("Checks :%d\n", checks)
+	var startingTile int
+	for _, c := range corners {
+		t := tiles[c]
+		_, hasTop := t.neighborConfiguration["top"]
+		_, hasLeft := t.neighborConfiguration["left"]
+		if !hasTop && !hasLeft {
+			startingTile = c
+		}
+
+	}
+	bigPicture := fuseTiles(startingTile, tiles)
+	for range borders {
+		for range flipped {
+			fmt.Printf("Found %d monsters with %d rotations, %+v fliped \n", findMonsters(bigPicture), bigPicture.rotations, bigPicture.flipped)
+			fmt.Printf("%+v\n", bigPicture)
+			bigPicture.flipTile()
+			fmt.Printf("%+v\n", bigPicture)
+		}
+		bigPicture.rotateTile()
+	}
 	// for _, t := range tiles {
 	// 	fmt.Printf("%d - \nNeighbors:\n", t.ID)
 	// 	for side, neighbor := range t.neighborConfiguration {
 	// 		fmt.Printf("\t%s - %d\n", side, neighbor)
 	// 	}
 	// }
+}
+
+func getMonsterPoints(b Bit, maxRow, maxCol int) []Bit {
+	var result []Bit
+
+	if b.Col+19 > maxCol {
+		return result
+	}
+	if b.Row+2 > maxRow {
+		return result
+	}
+	result = append(result, Bit{Col: b.Col + 18, Row: b.Row})
+
+	result = append(result, Bit{Col: b.Col, Row: b.Row + 1})
+	result = append(result, Bit{Col: b.Col + 5, Row: b.Row + 1})
+	result = append(result, Bit{Col: b.Col + 6, Row: b.Row + 1})
+	result = append(result, Bit{Col: b.Col + 11, Row: b.Row + 1})
+	result = append(result, Bit{Col: b.Col + 12, Row: b.Row + 1})
+	result = append(result, Bit{Col: b.Col + 17, Row: b.Row + 1})
+	result = append(result, Bit{Col: b.Col + 18, Row: b.Row + 1})
+	result = append(result, Bit{Col: b.Col + 19, Row: b.Row + 1})
+
+	result = append(result, Bit{Col: b.Col + 1, Row: b.Row + 2})
+	result = append(result, Bit{Col: b.Col + 4, Row: b.Row + 2})
+	result = append(result, Bit{Col: b.Col + 7, Row: b.Row + 2})
+	result = append(result, Bit{Col: b.Col + 10, Row: b.Row + 2})
+	result = append(result, Bit{Col: b.Col + 13, Row: b.Row + 2})
+	result = append(result, Bit{Col: b.Col + 16, Row: b.Row + 2})
+
+	return result
+
+}
+func findMonsters(tile Tile) int {
+
+	var monsters int
+	for row := tile.minRowPos; row <= tile.maxRowPos; row++ {
+		for col := tile.minColPos; col <= tile.maxColPos; col++ {
+			pointsToCheck := getMonsterPoints(Bit{Row: row, Col: col}, tile.maxRowPos, tile.maxColPos)
+			if len(pointsToCheck) == 0 {
+				continue
+			}
+			matches := true
+			for _, p := range pointsToCheck {
+				if !tile.image[p] {
+					matches = false
+					break
+				}
+			}
+			if matches {
+				monsters++
+			}
+		}
+	}
+	return monsters
+
+}
+
+func fuseTiles(startingTile int, tilemap map[int]Tile) Tile {
+
+	visitedTiles := make(map[int]bool)
+	currentTile := tilemap[startingTile]
+	rowIndex := 0
+	colIndex := 0
+	bigPicture := Tile{}
+	bigPicture.image = make(map[Bit]bool)
+	directions := []string{"right", "top", "left", "bottom"}
+	directionIndex := 0
+
+	type rowColIndexModifier struct {
+		row int
+		col int
+	}
+	rowColIndexModifierMap := make(map[string]rowColIndexModifier)
+	rowColIndexModifierMap["right"] = rowColIndexModifier{row: 0, col: 1}
+	rowColIndexModifierMap["top"] = rowColIndexModifier{row: -1, col: 0}
+	rowColIndexModifierMap["bottom"] = rowColIndexModifier{row: 1, col: 0}
+	rowColIndexModifierMap["left"] = rowColIndexModifier{row: 0, col: -1}
+
+	currentDirectionModifier := rowColIndexModifierMap[directions[directionIndex]]
+
+	// for _, id := range []int{1951, 2311, 3079, 2473, 1171, 1489, 2971, 2729, 1427} {
+	// 	t := tilemap[id]
+	// 	t.stripSides()
+	// 	fmt.Printf("%+v\n", t)
+	// }
+	for len(visitedTiles) != len(tilemap) {
+
+		visitedTiles[currentTile.ID] = true
+		//Because we start at the top left corner, we mark that point as 0,0. This means that we need to
+		//invert the Y axis to drive it down.
+		//currentTile.invertRowCoords()
+		currentTile.stripSides()
+
+		//remap all the bits using the row and col index
+		var row, col int
+		for row = currentTile.minRowPos; row <= currentTile.maxRowPos; row++ {
+			transplantedRow := row + rowIndex*8
+			for col = currentTile.minColPos; col <= currentTile.maxRowPos; col++ {
+				k := Bit{Col: col, Row: row}
+				remappedKey := Bit{Col: k.Col + colIndex*8, Row: transplantedRow}
+				bigPicture.image[remappedKey] = currentTile.image[k]
+				//Add all the points to the "bigPicture"
+				if remappedKey.Col < bigPicture.minColPos {
+					bigPicture.minColPos = remappedKey.Col
+				} else if remappedKey.Col > bigPicture.maxColPos {
+					bigPicture.maxColPos = remappedKey.Col
+				}
+				if remappedKey.Row < bigPicture.minRowPos {
+					bigPicture.minRowPos = remappedKey.Row
+
+				} else if remappedKey.Row > bigPicture.maxRowPos {
+					bigPicture.maxRowPos = remappedKey.Row
+				}
+			}
+		}
+		//To pick the next tile to visit:
+		for {
+			// If you have been everywhere, congratulations!
+			if len(visitedTiles) == len(tilemap) {
+				break
+			}
+			// Check if a neighbor is available at the current directions[directionIndex] and hasn't been visited.
+			if neighbor, ok := currentTile.neighborConfiguration[directions[directionIndex]]; ok && !visitedTiles[neighbor] {
+				currentTile = tilemap[neighbor]
+				break
+			} else {
+				// If there's none, or it has been visited, increment the directionIndex and try again
+				directionIndex = (directionIndex + 1) % len(directions)
+				// Whenever the direction index changes you need to update the rowIndexModifier and colIndexModifiers to the correct values
+				currentDirectionModifier = rowColIndexModifierMap[directions[directionIndex]]
+			}
+		}
+		colIndex += currentDirectionModifier.col
+		rowIndex += currentDirectionModifier.row
+
+	}
+	return bigPicture
+
 }
 
 var allSides = make(map[int][]int)
@@ -555,6 +761,10 @@ func parse(s []string) map[int]Tile {
 			}
 			t.flipTile()
 		}
+		t.minColPos = 0
+		t.minRowPos = 0
+		t.maxColPos = 9
+		t.maxRowPos = 9
 		result[t.ID] = t
 
 	}
