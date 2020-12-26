@@ -598,11 +598,6 @@ func fuseTiles(startingTile int, tilemap map[int]Tile) Tile {
 	rowColIndexModifierMap["right"] = rowColIndexModifier{row: 0, col: 1}
 	rowColIndexModifierMap["top"] = rowColIndexModifier{row: -1, col: 0}
 	rowColIndexModifierMap["bottom"] = rowColIndexModifier{row: 1, col: 0}
-
-	if _, ok := currentTile.neighbors["top"]; ok {
-		rowColIndexModifierMap["top"] = rowColIndexModifier{row: 1, col: 0}
-		rowColIndexModifierMap["bottom"] = rowColIndexModifier{row: -1, col: 0}
-	}
 	rowColIndexModifierMap["left"] = rowColIndexModifier{row: 0, col: -1}
 
 	currentDirectionModifier := rowColIndexModifierMap[directions[directionIndex]]
