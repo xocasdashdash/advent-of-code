@@ -7,9 +7,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
-var inputFile = flag.String("f", "testInput", "Relative file path to use as input.")
+var inputFile = flag.String("f", "input", "Relative file path to use as input.")
 
 var complementaryBorders = map[string]string{
 	"top":    "bottom",
@@ -29,36 +30,18 @@ type Bit struct {
 	Col int
 }
 
-type TileConfiguration struct {
-	rotations int
-	flip      bool
-}
-type NeighborMatch struct {
-	ID         int
-	neighborTC TileConfiguration
-}
-
-func (nc NeighborMatch) String() string {
-	var sb strings.Builder
-
-	sb.WriteString(fmt.Sprintf("{ ID: %d, TC: { rotations: %d, flipped %+v }", nc.ID, nc.neighborTC.rotations, nc.neighborTC.flip))
-	return sb.String()
-}
-
 type Tile struct {
-	ID                    int
-	image                 map[Bit]bool
-	neighborIDs           []int
-	neighborConfiguration map[string]int
-	locked                bool
-	rotations             int
-	flipped               bool
-	sideSignatures        map[string]map[bool]int
-
-	minRowPos int
-	maxRowPos int
-	minColPos int
-	maxColPos int
+	ID          int
+	image       map[Bit]bool
+	neighborIDs []int
+	neighbors   map[string]int
+	locked      bool
+	rotations   int
+	flipped     bool
+	minRowPos   int
+	maxRowPos   int
+	minColPos   int
+	maxColPos   int
 }
 
 func (t Tile) String() string {
@@ -84,28 +67,6 @@ func (t Tile) String() string {
 	sb.WriteString("\n")
 	return sb.String()
 }
-func (t Tile) PrintTile() string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Tile %d:\n", t.ID))
-	sb.WriteString(" " + strings.Repeat("-", t.maxRowPos-t.minRowPos+2))
-	sb.WriteString("\n")
-
-	for row := t.maxRowPos; row >= t.minRowPos; row-- {
-		sb.WriteString("|")
-		for col := t.minColPos; col <= t.maxColPos; col++ {
-			if t.image[Bit{Row: row, Col: col}] {
-				sb.WriteString("#")
-			} else {
-				sb.WriteString(".")
-			}
-		}
-		sb.WriteString("|")
-		sb.WriteString("\n")
-	}
-	sb.WriteString(" " + strings.Repeat("-", t.maxRowPos-t.minRowPos+2))
-	sb.WriteString("\n")
-	return sb.String()
-}
 
 func (t *Tile) rotateTile() error {
 	if t.locked {
@@ -113,12 +74,12 @@ func (t *Tile) rotateTile() error {
 	}
 	t.rotations = (t.rotations + 1) % 4
 	newBitMap := make(map[Bit]bool, len(t.image))
-	for r := 0; r <= 9; r++ {
-		for c := 0; c <= 9; c++ {
+	for r := t.minRowPos; r <= t.maxRowPos; r++ {
+		for c := t.minColPos; c <= t.maxColPos; c++ {
 			key := Bit{Row: r, Col: c}
 			currentBit := t.image[key]
 			nextKey := Bit{
-				Row: 9 - c,
+				Row: t.maxRowPos - c,
 				Col: r,
 			}
 			if currentBit {
@@ -141,29 +102,29 @@ func (t *Tile) compareSideToTile(tt Tile, border string) bool {
 
 	switch complementaryBorders[border] {
 	case "top":
-		leftPoint = Bit{Row: 0, Col: 0}
-		rightPoint = Bit{Row: 9, Col: 0}
+		leftPoint = Bit{Row: t.minRowPos, Col: t.minColPos}
+		rightPoint = Bit{Row: tt.maxRowPos, Col: tt.minColPos}
 		colIncreaseL = 1
 		colIncreaseR = 1
 		rowIncreaseL = 0
 		rowIncreaseR = 0
 	case "bottom":
-		leftPoint = Bit{Row: 9, Col: 0}
-		rightPoint = Bit{Row: 0, Col: 0}
+		leftPoint = Bit{Row: t.maxRowPos, Col: t.minColPos}
+		rightPoint = Bit{Row: t.minColPos, Col: tt.minColPos}
 		colIncreaseL = 1
 		colIncreaseR = 1
 		rowIncreaseL = 0
 		rowIncreaseR = 0
 	case "right":
-		leftPoint = Bit{Row: 0, Col: 9}
-		rightPoint = Bit{Row: 0, Col: 0}
+		leftPoint = Bit{Row: t.minRowPos, Col: t.maxColPos}
+		rightPoint = Bit{Row: tt.minRowPos, Col: tt.minColPos}
 		colIncreaseL = 0
 		colIncreaseR = 0
 		rowIncreaseL = 1
 		rowIncreaseR = 1
 	case "left":
-		leftPoint = Bit{Row: 0, Col: 0}
-		rightPoint = Bit{Row: 0, Col: 9}
+		leftPoint = Bit{Row: t.minRowPos, Col: t.minColPos}
+		rightPoint = Bit{Row: t.minRowPos, Col: tt.maxColPos}
 		colIncreaseL = 0
 		colIncreaseR = 0
 		rowIncreaseL = 1
@@ -185,17 +146,6 @@ func (t *Tile) compareSideToTile(tt Tile, border string) bool {
 	//fmt.Printf("SideA: |%s|\nSideB: |%s|\n", t.printSide(complementaryBorders[border]), tt.printSide(border))
 	return true
 }
-func (t *Tile) printSides() {
-
-	for range borders {
-		for range flipped {
-			//fmt.Printf("Border %s,flipped: %+v,  result: %+d\n", b, f, t.getSideSignature(b))
-			t.flipTile()
-		}
-		//t.rotateTile()
-	}
-}
-
 func (t *Tile) stripSides() {
 	newBitMap := make(map[Bit]bool, len(t.image))
 	var row, col int
@@ -217,12 +167,12 @@ func (t *Tile) flipTile() error {
 	}
 	t.flipped = !t.flipped
 	newBitMap := make(map[Bit]bool, len(t.image))
-	for r := 0; r <= 9; r++ {
-		for c := 0; c <= 9; c++ {
+	for r := t.minRowPos; r <= t.maxRowPos; r++ {
+		for c := t.minColPos; c <= t.maxColPos; c++ {
 			key := Bit{Row: r, Col: c}
 			currentBit := t.image[key]
 			nextKey := Bit{
-				Row: 9 - r,
+				Row: t.maxRowPos - r,
 				Col: c,
 			}
 			newBitMap[nextKey] = currentBit
@@ -231,8 +181,6 @@ func (t *Tile) flipTile() error {
 	t.image = newBitMap
 	return nil
 }
-
-type borderFunc func() int
 
 func (t *Tile) topNeighborFunc() int {
 
@@ -278,6 +226,10 @@ func (t *Tile) leftNeighborFunc() int {
 	}
 	return result
 }
+
+//In order to avoid conflicts of orientation, it's
+//easier to just check a single place and just rotate the
+//tile.
 func (t *Tile) getAllPossibleSides() []int {
 
 	var result []int
@@ -336,19 +288,6 @@ func (t *Tile) printSide(side string) string {
 	return strings.Repeat(".", padding) + r
 }
 
-// func (t *Tile) updateSides() {
-
-// 	t.sideSignatures["top"][t.flipped] = t.topNeighborFunc()
-// 	t.sideSignatures["right"][t.flipped] = t.rightNeighborFunc()
-// 	t.sideSignatures["bottom"][t.flipped] = t.bottomNeighborFunc()
-// 	t.sideSignatures["left"][t.flipped] = t.leftNeighborFunc()
-// 	t.flipTile()
-// 	t.sideSignatures["top"][t.flipped] = t.topNeighborFunc()
-// 	t.sideSignatures["right"][t.flipped] = t.rightNeighborFunc()
-// 	t.sideSignatures["bottom"][t.flipped] = t.bottomNeighborFunc()
-// 	t.sideSignatures["left"][t.flipped] = t.leftNeighborFunc()
-// 	t.flipTile()
-// }
 func (t *Tile) getSideSignature(side string) int {
 
 	var result int
@@ -387,21 +326,13 @@ func buildTilemap(startTile int, tilemap map[int]Tile) map[int]Tile {
 	visitedTiles := make(map[int]bool)
 	visitList := []int{startTile}
 	startingTile := tilemap[startTile]
-	startingTile.rotateTile()
-	startingTile.flipTile()
-	startingTile.rotateTile()
+	//startingTile.flipTile()
 	tilemap[startTile] = startingTile
 	for len(visitedTiles) != len(tilemap) {
 		//fmt.Printf("Next visit: %+v\n", visitList)
 		var nextVisitList []int
 		if len(visitList) == 0 {
-			//fmt.Printf("%+v", visitedTiles)
-			for tID := range tilemap {
-				if _, ok := visitedTiles[tID]; !ok {
-					fmt.Printf("Did not visit %d\n", tID)
-				}
-			}
-			panic("Bad")
+			panic("impossible ")
 		}
 		for _, tileID := range visitList {
 			//fmt.Printf("Visiting %d\n", tileID)
@@ -411,33 +342,32 @@ func buildTilemap(startTile int, tilemap map[int]Tile) map[int]Tile {
 			}
 			currentTile := tilemap[tileID]
 			visitedTiles[tileID] = true
-			if len(currentTile.neighborConfiguration) == len(currentTile.neighborIDs) {
+			if len(currentTile.neighbors) == len(currentTile.neighborIDs) {
 				continue
 			}
 
-			//currentTile.printSides()
 			for _, neighborID := range currentTile.neighborIDs {
 				if visitedTiles[neighborID] {
 					//fmt.Printf("Skipping %d as we already visited it\n", neighborID)
 					continue
 				}
 				currentNeighbor := tilemap[neighborID]
-				if len(currentNeighbor.neighborConfiguration) == len(currentNeighbor.neighborIDs) {
+				if len(currentNeighbor.neighbors) == len(currentNeighbor.neighborIDs) {
 					continue
 				}
 				nextVisitList = append(nextVisitList, neighborID)
 				var matchError error
 				for _, border := range borders {
-					if currentNeighbor.neighborConfiguration != nil {
-						_, ok := currentNeighbor.neighborConfiguration[complementaryBorders[border]]
+					if currentNeighbor.neighbors != nil {
+						_, ok := currentNeighbor.neighbors[complementaryBorders[border]]
 						if ok {
 							continue
 						}
 					}
 
 					//This tile already has a neighbor here
-					if currentTile.neighborConfiguration != nil {
-						_, ok := currentTile.neighborConfiguration[border]
+					if currentTile.neighbors != nil {
+						_, ok := currentTile.neighbors[border]
 						if ok {
 							continue
 						}
@@ -459,17 +389,17 @@ func buildTilemap(startTile int, tilemap map[int]Tile) map[int]Tile {
 						}
 						// fmt.Printf("Current neighbor config: %+v\n", currentNeighbor.TileConfig)
 						//We have a match
-						if currentTile.neighborConfiguration == nil {
-							currentTile.neighborConfiguration = make(map[string]int)
+						if currentTile.neighbors == nil {
+							currentTile.neighbors = make(map[string]int)
 						}
-						currentTile.neighborConfiguration[border] = currentNeighbor.ID
+						currentTile.neighbors[border] = currentNeighbor.ID
 						currentTile.locked = true
 						tilemap[currentTile.ID] = currentTile
 
-						if currentNeighbor.neighborConfiguration == nil {
-							currentNeighbor.neighborConfiguration = make(map[string]int)
+						if currentNeighbor.neighbors == nil {
+							currentNeighbor.neighbors = make(map[string]int)
 						}
-						currentNeighbor.neighborConfiguration[complementaryBorders[border]] = currentTile.ID
+						currentNeighbor.neighbors[complementaryBorders[border]] = currentTile.ID
 						currentNeighbor.locked = true
 						tilemap[currentNeighbor.ID] = currentNeighbor
 						break
@@ -485,7 +415,6 @@ func buildTilemap(startTile int, tilemap map[int]Tile) map[int]Tile {
 	return tilemap
 }
 func findPossibleNeighbors(tilemap map[int]Tile) map[int]Tile {
-	//result := make(map[int]Tile)
 	tileIDs := make([]int, 0, len(tilemap))
 	for _, t := range tilemap {
 		tileIDs = append(tileIDs, t.ID)
@@ -535,6 +464,7 @@ func main() {
 	input, _ := ioutil.ReadFile(*inputFile)
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
 	tiles := parse(trimmedInput)
+	tp1 := time.Now()
 	tiles = findPossibleNeighbors(tiles)
 	corners := make([]int, 0)
 	result := 1
@@ -545,38 +475,50 @@ func main() {
 			result *= t.ID
 		}
 	}
-	//fmt.Printf("Corners: %+v", corners)
-	fmt.Printf("Part1: %d\n", result)
 	sort.Ints(corners)
+	fmt.Printf("Corners: %+v\n", corners)
+	fmt.Printf("Part1: %d\n", result)
 	//fmt.Printf("Corners: %+v\n", uniqueInts(corners))
-
-	tiles = buildTilemap(tiles[1427].ID, tiles)
+	//as it is built right now we can start from any place
+	fmt.Printf("P1 Took %s\n", time.Since(tp1))
+	t := time.Now()
+	defer func() {
+		fmt.Printf("Took %s\n", time.Since(t))
+	}()
+	tiles = buildTilemap(corners[0], tiles)
 	var startingTile int
 	for _, c := range corners {
 		t := tiles[c]
-		_, hasTop := t.neighborConfiguration["top"]
-		_, hasLeft := t.neighborConfiguration["left"]
+		_, hasTop := t.neighbors["top"]
+		_, hasLeft := t.neighbors["left"]
 		if !hasTop && !hasLeft {
 			startingTile = c
+			break
 		}
-
 	}
+	fmt.Printf("\n%d -> %+v\n", startingTile, tiles[startingTile].neighbors)
+	//This fusion only works starting at the top corners.
 	bigPicture := fuseTiles(startingTile, tiles)
 	for range borders {
 		for range flipped {
-			fmt.Printf("Found %d monsters with %d rotations, %+v fliped \n", findMonsters(bigPicture), bigPicture.rotations, bigPicture.flipped)
-			fmt.Printf("%+v\n", bigPicture)
+			monstersFound := findMonsters(bigPicture)
+			if monstersFound != 0 {
+				fmt.Printf("Found %d monsters with %d rotations, %+v fliped \n", findMonsters(bigPicture), bigPicture.rotations, bigPicture.flipped)
+				totalHashtags := 0
+				for _, p := range bigPicture.image {
+					if p {
+						totalHashtags++
+					}
+				}
+				fmt.Printf("Rough index:%d\n", totalHashtags-monstersFound*15)
+				//We can only find monsters in one specific configuration.
+				return
+			}
 			bigPicture.flipTile()
-			fmt.Printf("%+v\n", bigPicture)
 		}
 		bigPicture.rotateTile()
 	}
-	// for _, t := range tiles {
-	// 	fmt.Printf("%d - \nNeighbors:\n", t.ID)
-	// 	for side, neighbor := range t.neighborConfiguration {
-	// 		fmt.Printf("\t%s - %d\n", side, neighbor)
-	// 	}
-	// }
+
 }
 
 func getMonsterPoints(b Bit, maxRow, maxCol int) []Bit {
@@ -634,6 +576,9 @@ func findMonsters(tile Tile) int {
 
 }
 
+//Right now this works by creating a spiral, so it works in a square as long as you start from one of the outer
+//borders. In order for this to work we would need to be able to walk back
+// and go to a point where going in a different direction is possible (A* perhaps?)
 func fuseTiles(startingTile int, tilemap map[int]Tile) Tile {
 
 	visitedTiles := make(map[int]bool)
@@ -653,21 +598,24 @@ func fuseTiles(startingTile int, tilemap map[int]Tile) Tile {
 	rowColIndexModifierMap["right"] = rowColIndexModifier{row: 0, col: 1}
 	rowColIndexModifierMap["top"] = rowColIndexModifier{row: -1, col: 0}
 	rowColIndexModifierMap["bottom"] = rowColIndexModifier{row: 1, col: 0}
+
+	if _, ok := currentTile.neighbors["top"]; ok {
+		rowColIndexModifierMap["top"] = rowColIndexModifier{row: 1, col: 0}
+		rowColIndexModifierMap["bottom"] = rowColIndexModifier{row: -1, col: 0}
+	}
 	rowColIndexModifierMap["left"] = rowColIndexModifier{row: 0, col: -1}
 
 	currentDirectionModifier := rowColIndexModifierMap[directions[directionIndex]]
-
-	// for _, id := range []int{1951, 2311, 3079, 2473, 1171, 1489, 2971, 2729, 1427} {
-	// 	t := tilemap[id]
-	// 	t.stripSides()
-	// 	fmt.Printf("%+v\n", t)
-	// }
+	numberOfDirectionsChanges := 0
+	visitationOrder := make([]int, 0, 144)
 	for len(visitedTiles) != len(tilemap) {
 
 		visitedTiles[currentTile.ID] = true
+		visitationOrder = append(visitationOrder, currentTile.ID)
 		//Because we start at the top left corner, we mark that point as 0,0. This means that we need to
 		//invert the Y axis to drive it down.
 		//currentTile.invertRowCoords()
+		//currentTile.flipTile()
 		currentTile.stripSides()
 
 		//remap all the bits using the row and col index
@@ -699,14 +647,20 @@ func fuseTiles(startingTile int, tilemap map[int]Tile) Tile {
 				break
 			}
 			// Check if a neighbor is available at the current directions[directionIndex] and hasn't been visited.
-			if neighbor, ok := currentTile.neighborConfiguration[directions[directionIndex]]; ok && !visitedTiles[neighbor] {
+			if neighbor, ok := currentTile.neighbors[directions[directionIndex]]; ok && !visitedTiles[neighbor] {
 				currentTile = tilemap[neighbor]
+				numberOfDirectionsChanges = 0
 				break
 			} else {
 				// If there's none, or it has been visited, increment the directionIndex and try again
 				directionIndex = (directionIndex + 1) % len(directions)
 				// Whenever the direction index changes you need to update the rowIndexModifier and colIndexModifiers to the correct values
 				currentDirectionModifier = rowColIndexModifierMap[directions[directionIndex]]
+				numberOfDirectionsChanges++
+			}
+			if numberOfDirectionsChanges > 4 {
+				//If this happens it means you're lost and there's no way to continue
+				panic("bad")
 			}
 		}
 		colIndex += currentDirectionModifier.col
@@ -725,8 +679,9 @@ func parse(s []string) map[int]Tile {
 	currentTile := Tile{}
 	rowIndex := 0
 	currentTile.image = make(map[Bit]bool)
-
 	for _, l := range s {
+		currentTile.maxColPos = 9
+		currentTile.maxRowPos = 9
 		if l == "" {
 			result[currentTile.ID] = currentTile
 			rowIndex = 0
@@ -749,18 +704,6 @@ func parse(s []string) map[int]Tile {
 	}
 	result[currentTile.ID] = currentTile
 	for _, t := range result {
-		t.sideSignatures = make(map[string]map[bool]int)
-		for _, f := range flipped {
-			for _, b := range borders {
-				if t.sideSignatures[b] == nil {
-					t.sideSignatures[b] = make(map[bool]int)
-				}
-				s := t.getSideSignature(b)
-				allSides[s] = uniqueInts(append(allSides[s], t.ID))
-				t.sideSignatures[b][f] = s
-			}
-			t.flipTile()
-		}
 		t.minColPos = 0
 		t.minRowPos = 0
 		t.maxColPos = 9
