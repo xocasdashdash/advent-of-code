@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"runtime"
 	"sort"
 	"strings"
 )
@@ -72,23 +71,20 @@ func main() {
 	flag.Parse()
 	input, _ := ioutil.ReadFile(*inputFile)
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
-	f, ingredients, allergens := parse(trimmedInput)
-	fmt.Printf("%+v\n", f)
-	fmt.Printf("******\n")
+	ingredients, allergens := parse(trimmedInput)
 
 	//For each allergen:
 	for _, allergen := range allergens {
 		//- Get list of foods that have this allergen
-		globalIngredients := make([]string, 0, 10)
+		globalIngredients := make(map[string]int)
 		for _, f := range allergen.Foods {
 			for _, i := range f.Ingredients {
-				globalIngredients = append(globalIngredients, i.name)
+				globalIngredients[i.name] = globalIngredients[i.name] + 1
 			}
 		}
 		//- Generate global list of ingredients
-		ingredientsCount := ingredientOcurrences(globalIngredients)
 		//- keep all the ingredients that are available on every food (ingredient map[ingredient]count==number of foods)
-		for ingredient, count := range ingredientsCount {
+		for ingredient, count := range globalIngredients {
 			//- If count ==  => Keep candidate
 			//- This are the possible ingredients for this allergen
 			if count == len(allergen.Foods) {
@@ -125,7 +121,6 @@ func main() {
 	}
 
 	for len(matchedAllergens) != len(allergens) {
-		fmt.Printf("Loop!")
 		for _, ing := range ingredients {
 			if len(ing.possibleAllergens) == 0 || ing.allergen != nil {
 				continue
@@ -167,12 +162,9 @@ func main() {
 	fmt.Printf("Part2: %s", strings.Join(ingredientsByAllergen, ","))
 }
 
-func parse(s []string) (map[int]*Food, map[string]*Ingredient, map[string]*Allergen) {
+func parse(s []string) (map[string]*Ingredient, map[string]*Allergen) {
 
-	var foods map[int]*Food
-	foods = make(map[int]*Food)
-	var ingredients map[string]*Ingredient
-	ingredients = make(map[string]*Ingredient)
+	ingredients := make(map[string]*Ingredient)
 	allergens := make(map[string]*Allergen)
 	for k, l := range s {
 
@@ -209,8 +201,7 @@ func parse(s []string) (map[int]*Food, map[string]*Ingredient, map[string]*Aller
 			currentFood.Ingredients[ingredient.name] = ingredient
 			ingredients[ingredient.name] = ingredient
 		}
-		foods[currentFood.ID] = currentFood
 	}
-	return foods, ingredients, allergens
+	return ingredients, allergens
 
 }
