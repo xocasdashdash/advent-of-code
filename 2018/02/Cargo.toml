@@ -1,0 +1,7 @@
+[package]
+name = "aoc-02"
+version = "0.1.0"
+authors = ["Joaquín Fernández Campo <jfcampo@gmail.com>"]
+
+[dependencies]
+itertools = "0.7.11"
