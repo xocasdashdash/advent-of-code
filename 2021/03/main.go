@@ -93,9 +93,9 @@ func filterForCO2(input [][]int,index int) int {
 	sum := 0
 	for _,v := range input{
 		sum += v[index]
-	}
-	if 2*sum >= len(input) {
-		return 0
+		if 2*sum >= len(input) {
+			return 0
+		}
 	}
 	return 1
 }
@@ -103,9 +103,9 @@ func filterForO2(input [][]int,index int) int{
 	sum := 0
 	for _,v := range input{
 		sum += v[index]
-	}
-	if 2*sum >= len(input) {
-		return 1
+		if 2*sum >= len(input) {
+			return 1
+		}
 	}
 	return 0
 }
