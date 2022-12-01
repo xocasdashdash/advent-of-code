@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var inputFile = flag.String("f", "input", "Relative file path to use as input.")
@@ -113,8 +114,12 @@ func main() {
 	flag.Parse()
 	input, _ := ioutil.ReadFile(*inputFile)
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
+	t := time.Now()
 	fmt.Println("part1", part1(parseInput(trimmedInput)))
+	fmt.Println("Took", time.Since(t))
+	t = time.Now()
 	fmt.Println("part2", part2(parseInput(trimmedInput)))
+	fmt.Println("Took", time.Since(t))
 
 }
 
