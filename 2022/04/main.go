@@ -44,6 +44,13 @@ func GenerateOverlap(a Range, b Range) *Range {
 		B 1 - 3 - - -
 		C - - - - - -
 	*/
+	// This logic is simpler but doesn't generate the overlap
+	// if a.Min <= b.Min && a.Max >= b.Max {
+	// 	return &Range{}
+	// } else if b.Min <= a.Min && b.Max >= a.Max {
+	// 	return &Range{}
+	// }
+
 	if a.Min <= b.Min {
 		min := b.Min
 		if a.Max >= b.Min {
