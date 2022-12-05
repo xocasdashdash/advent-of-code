@@ -78,20 +78,15 @@ func main() {
 		originStack.Crates = s[i.Origin].Crates[i.Quantity:]
 		s[i.Origin] = originStack
 		if !*part2 {
+			// On part 1 we reverse the order of the list so the append is easier
 			for i, j := 0, len(cratesToMove)-1; i < j; i, j = i+1, j-1 {
 				cratesToMove[i], cratesToMove[j] = cratesToMove[j], cratesToMove[i]
 			}
 		}
 		destinationStack := s[i.Destination]
 		// TODO: Undertand why using append did not work as expected
-		newCrates := make([]Crate, len(cratesToMove)+len(destinationStack.Crates))
-		for i := range cratesToMove {
-			newCrates[i] = cratesToMove[i]
-		}
-		for j := range destinationStack.Crates {
-			newCrates[j+len(cratesToMove)] = destinationStack.Crates[j]
-		}
-		destinationStack.Crates = newCrates
+		// With this trick we force a new backing slice.
+		destinationStack.Crates = append(append([]Crate{}, cratesToMove...), destinationStack.Crates...)
 		s[i.Destination] = destinationStack
 
 	}
@@ -100,5 +95,5 @@ func main() {
 		v, _ := strconv.Atoi(i)
 		output[v] = string(s[i].Crates[0])
 	}
-	fmt.Println("Part1", strings.TrimSpace(strings.Join(output, "")))
+	fmt.Println("Result", strings.TrimSpace(strings.Join(output, "")))
 }
