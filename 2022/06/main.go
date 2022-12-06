@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"time"
 )
 
 var inputFile = flag.String("f", "input", "Relative file path to use as input.")
@@ -30,10 +31,14 @@ func main() {
 	flag.Parse()
 	input, _ := ioutil.ReadFile(*inputFile)
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
+	t := time.Now()
 	for _, l := range trimmedInput {
 		fmt.Println("Part1", findUniqueSequenceOfLength(l, 4))
 	}
+	fmt.Println("Took", time.Since(t))
+	t = time.Now()
 	for _, l := range trimmedInput {
 		fmt.Println("Part2", findUniqueSequenceOfLength(l, 14))
 	}
+	fmt.Println("Took", time.Since(t))
 }
