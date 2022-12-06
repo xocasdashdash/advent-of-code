@@ -13,12 +13,11 @@ func findUniqueSequenceOfLength(input string, length int) int {
 
 	chars := strings.Split(input, "")
 	for i := 0; i < len(chars)-length; i++ {
-		substring := strings.Join(chars[i:i+length], "")
 		uniqueMap := make(map[string]bool)
 		// TODO: This is too brute force, need a datastruct that
 		// keeps uniqueness and also can tell you how many unique
 		// characters it's keeping.
-		for _, c := range strings.Split(substring, "") {
+		for _, c := range chars[i : i+length] {
 			uniqueMap[c] = true
 		}
 		if len(uniqueMap) == length {
