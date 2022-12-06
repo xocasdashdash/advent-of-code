@@ -12,7 +12,7 @@ var inputFile = flag.String("f", "input", "Relative file path to use as input.")
 func findUniqueSequenceOfLength(input string, length int) int {
 
 	chars := strings.Split(input, "")
-	for i := 0; i < len(chars)-length; i++ {
+	for i := length; i < len(chars); i++ {
 		uniqueMap := make(map[string]bool)
 		// TODO: This is too brute force, need a datastruct that
 		// keeps uniqueness and also can tell you how many unique
