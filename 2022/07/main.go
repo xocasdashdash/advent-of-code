@@ -1,14 +1,16 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
-	"sort"
 	"strings"
+	"time"
 )
 
+//go:embed input
+var input string
 var inputFile = flag.String("f", "input", "Relative file path to use as input.")
 
 type File struct {
@@ -82,12 +84,12 @@ func parseLines(lines []string) (*Dir, []*Dir) {
 	dirList := make([]*Dir, 0, 10)
 	for index < len(lines) {
 		l := lines[index]
-		switch string(l[0]) {
+		switch l[0] {
 		// Command
-		case "$":
+		case '$':
 			// We assume that you can't cd without a previous ls
 			// ls commands are ignored as we read the output afterwards
-			if string(l[0:4]) == "$ cd" {
+			if l[0:4] == "$ cd" {
 				var dirName string
 				fmt.Sscanf(l, "$ cd %s", &dirName)
 				switch dirName {
@@ -96,16 +98,15 @@ func parseLines(lines []string) (*Dir, []*Dir) {
 				case "/":
 					*currentDir = *NewDir(dirName)
 				default:
+					currentDir.dirs[dirName] = NewDir(dirName)
+					currentDir.dirs[dirName].parentDir = currentDir
+					dirList = append(dirList, currentDir.dirs[dirName])
 					currentDir = currentDir.dirs[dirName]
 				}
 			}
 		// Directory
-		case "d":
-			var dirName string
-			fmt.Sscanf(l, "dir %s", &dirName)
-			currentDir.dirs[dirName] = NewDir(dirName)
-			currentDir.dirs[dirName].parentDir = currentDir
-			dirList = append(dirList, currentDir.dirs[dirName])
+		// Can ignore, handled when we cd into the dir.
+		case 'd':
 		// File
 		default:
 			var fileName string
@@ -123,10 +124,14 @@ func parseLines(lines []string) (*Dir, []*Dir) {
 	return rootDir, dirList
 }
 func main() {
-	flag.Parse()
-	input, _ := ioutil.ReadFile(*inputFile)
+	start := time.Now()
+	//flag.Parse()
+	//input, _ := ioutil.ReadFile(*inputFile)
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
+	t := time.Now()
 	rootDir, dirList := parseLines(trimmedInput)
+	fmt.Println("Took(Parsing)", time.Since(t))
+	t = time.Now()
 	sizeLimit := 100_000
 	part1 := 0
 	for _, d := range dirList {
@@ -135,19 +140,23 @@ func main() {
 			part1 += dirSize
 		}
 	}
+	fmt.Println("Took(P1)", time.Since(t))
 	fmt.Println("Part1", part1)
+	t = time.Now()
 	totalSize := 70000000
 	freeSpace := totalSize - rootDir.Size()
 	missingSpace := 30000000 - freeSpace
-	fmt.Println("need to free", missingSpace)
-	sort.Slice(dirList, func(i, j int) bool {
-		return dirList[i].Size() < dirList[j].Size()
-	})
+
+	minSize := dirList[0].size
+	// No need to do the sort, we just need to find the
+	// minimal value greater than `missingSpace`
 	for _, v := range dirList {
-		if v.Size() >= missingSpace {
-			fmt.Println("Part2", v.Size())
-			break
+		if v.Size() > missingSpace && v.Size() < minSize {
+			minSize = v.Size()
 		}
 	}
+	fmt.Println("Took(P2)", time.Since(t))
+	fmt.Println("Part2", minSize)
+	fmt.Println("Total time", time.Since(start))
 
 }
