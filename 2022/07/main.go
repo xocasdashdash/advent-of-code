@@ -73,35 +73,40 @@ func NewDir(Name string) *Dir {
 		dirs:  make(map[string]*Dir, 0),
 	}
 }
-func parseLines(d *Dir, lines []string) (*Dir, []*Dir) {
+func parseLines(lines []string) (*Dir, []*Dir) {
 
-	index := 1
-	currentDir := d
-	rootDir := d
+	index := 0
+	var rootDir *Dir
+	currentDir := new(Dir)
+	rootDir = currentDir
 	dirList := make([]*Dir, 0, 10)
 	for index < len(lines) {
 		l := lines[index]
 		switch string(l[0]) {
 		// Command
 		case "$":
-			// We assume that you can't cd without a previos ls
+			// We assume that you can't cd without a previous ls
+			// ls commands are ignored as we read the output afterwards
 			if string(l[0:4]) == "$ cd" {
 				var dirName string
 				fmt.Sscanf(l, "$ cd %s", &dirName)
 				switch dirName {
 				case "..":
 					currentDir = currentDir.parentDir
+				case "/":
+					*currentDir = *NewDir(dirName)
 				default:
 					currentDir = currentDir.dirs[dirName]
 				}
 			}
+		// Directory
 		case "d":
-			// Directory
 			var dirName string
 			fmt.Sscanf(l, "dir %s", &dirName)
 			currentDir.dirs[dirName] = NewDir(dirName)
 			currentDir.dirs[dirName].parentDir = currentDir
 			dirList = append(dirList, currentDir.dirs[dirName])
+		// File
 		default:
 			var fileName string
 			var fileSize int
@@ -121,7 +126,7 @@ func main() {
 	flag.Parse()
 	input, _ := ioutil.ReadFile(*inputFile)
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
-	rootDir, dirList := parseLines(NewDir("/"), trimmedInput)
+	rootDir, dirList := parseLines(trimmedInput)
 	sizeLimit := 100_000
 	part1 := 0
 	for _, d := range dirList {
