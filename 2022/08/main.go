@@ -61,10 +61,11 @@ func visibleTrees(t TreeMap, startCoord Coord, direction Coord) []Coord {
 	currentMaxHeight := -1
 	result := make([]Coord, 0)
 	currentCoord := startCoord
-	currentTree, ok := t[currentCoord]
+	var currentTree *Tree
+	currentTree = t[currentCoord]
 	// Do this to simplify going out of the map.
 	nextCoord := AddCoords(currentCoord, direction)
-	_, ok = t[nextCoord]
+	_, ok := t[nextCoord]
 	for ok {
 		if currentTree.Height > currentMaxHeight {
 			currentMaxHeight = currentTree.Height
@@ -112,19 +113,16 @@ func main() {
 	// 	}
 	// 	fmt.Printf("\n")
 	// }
-	for _, r := range []int{0, len(trimmedInput) - 1} {
-		for c := 0; c < len(trimmedInput); c++ {
-			for _, d := range directions {
-				found := visibleTrees(tmap, Coord{Row: r, Col: c}, d)
-				totalVisibleTrees = append(totalVisibleTrees, found...)
-			}
-		}
-	}
 
+	// We can avoid having two loops by "flipping" the rows/cols
+	// on each pass. Because visibleTrees returns 0 for the invalid cases
+	// like going south on the bottom row.
 	for _, c := range []int{0, len(trimmedInput) - 1} {
 		for r := 0; r < len(trimmedInput); r++ {
 			for _, d := range directions {
 				found := visibleTrees(tmap, Coord{Row: r, Col: c}, d)
+				totalVisibleTrees = append(totalVisibleTrees, found...)
+				found = visibleTrees(tmap, Coord{Row: c, Col: r}, d)
 				totalVisibleTrees = append(totalVisibleTrees, found...)
 			}
 		}
