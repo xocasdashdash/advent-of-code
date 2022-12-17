@@ -19,6 +19,7 @@ var testInput2 string
 
 var testMode = flag.Bool("test", false, "Set to run using the testInput")
 var part2 = flag.Bool("part2", false, "Set to run using the testInput2")
+var print = flag.Bool("print", false, "Set to enable printing")
 
 type Coord struct {
 	X, Y int
@@ -187,19 +188,23 @@ func WalkTheRope(start Coord, instructions []Instruction, numberOfKnots int) map
 				nextKnot = nextKnot.Next
 			}
 		}
+
 		PrintMap(headKnot, ins)
-		time.Sleep(10 * time.Millisecond)
 	}
 	return tailKnot.Visited
 }
+
+// Set some sane defaults
+var minX, minY int = -10, 10
+var maxX, maxY int = -10, 10
+
 func PrintMap(head *Knot, instruction Instruction) {
+	if *print == false {
+		return
+	}
 
-	// Set some sane defaults
-	minX, minY := -10, 10
-	maxX, maxY := -10, 10
-	current := head.Next
+	current := head
 	for current != nil {
-
 		if current.Coord.X < minX {
 			minX = current.Coord.X
 		} else if current.Coord.X > maxX {
@@ -213,10 +218,6 @@ func PrintMap(head *Knot, instruction Instruction) {
 		}
 		current = current.Next
 	}
-	// minX = -13
-	// maxX = 17
-	// minY = -5
-	// maxY = 16
 	positions := make(map[Coord]int)
 	current = head.Next
 	for current != nil {
@@ -245,6 +246,7 @@ func PrintMap(head *Knot, instruction Instruction) {
 		fmt.Printf("\n")
 	}
 	fmt.Printf("\n---------\n")
+	time.Sleep(10 * time.Millisecond)
 }
 func main() {
 	start := time.Now()
@@ -262,11 +264,12 @@ func main() {
 	ins := parseLines(trimmedInput)
 	fmt.Println("Took(parsing)", time.Since(parsingT))
 	part1T := time.Now()
-	// p1 := WalkTheRope(Coord{0, 0}, ins, 1)
-	// fmt.Println("Part1", len(p1))
-	p2 := WalkTheRope(Coord{0, 0}, ins, 9)
-	fmt.Println("Part2", len(p2))
+	p1 := WalkTheRope(Coord{0, 0}, ins, 1)
 	fmt.Println("Took(part1)", time.Since(part1T))
+	fmt.Println("Part1", len(p1))
+	part2T := time.Now()
+	p2 := WalkTheRope(Coord{0, 0}, ins, 9)
+	fmt.Println("Took(part2)", time.Since(part2T))
+	fmt.Println("Part2", len(p2))
 	fmt.Println("Took", time.Since(start))
-
 }
