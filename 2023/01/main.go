@@ -67,6 +67,7 @@ func main() {
 
 func replaceDigitsPart2(input []string) []string {
 	positionIndex := map[int]string{
+		0: "zero",
 		1: "one",
 		2: "two",
 		3: "three",
@@ -90,7 +91,7 @@ func replaceDigitsPart2(input []string) []string {
 			minPos := strings.Index(l, v)
 			if minPos != -1 {
 				found = true
-				minPosition[k-1] = minPos
+				minPosition[k] = minPos
 			}
 		}
 		if !found {
@@ -103,7 +104,7 @@ func replaceDigitsPart2(input []string) []string {
 				minIndex = index
 			}
 		}
-		valueToReplace := positionIndex[minIndex+1]
+		valueToReplace := positionIndex[minIndex]
 		if !re.MatchString(l[0:minPosition[minIndex]]) {
 			// Theres no digit before the string, we replace
 			// fmt.Println("Replacing", valueToReplace, "at", minPosition[minIndex], "with", strconv.Itoa(minIndex+1))
@@ -117,7 +118,7 @@ func replaceDigitsPart2(input []string) []string {
 			maxPos := strings.LastIndex(l, v)
 			if maxPos != -1 {
 				found = true
-				maxPosition[k-1] = maxPos
+				maxPosition[k] = maxPos
 			}
 		}
 		if !found {
@@ -130,7 +131,7 @@ func replaceDigitsPart2(input []string) []string {
 				maxIndex = index
 			}
 		}
-		valueToReplace = positionIndex[maxIndex+1]
+		valueToReplace = positionIndex[maxIndex]
 		if re.MatchString(l[maxPosition[maxIndex]:]) {
 			// Theres a digit before the string, we continue
 			// fmt.Println("Theres a digit after the string, we continue")
@@ -138,7 +139,7 @@ func replaceDigitsPart2(input []string) []string {
 		}
 		//fmt.Println("Replacing", valueToReplace, "at", maxPosition[maxIndex], "with", strconv.Itoa(maxIndex+1))
 		// fmt.Println("Replacing max", l[:maxPosition[maxIndex]], l[maxPosition[maxIndex]:])
-		input[lineIndex] = l[:maxPosition[maxIndex]] + strings.Replace(l[maxPosition[maxIndex]:], valueToReplace, strconv.Itoa(maxIndex+1), 1)
+		input[lineIndex] = l[:maxPosition[maxIndex]] + strings.Replace(l[maxPosition[maxIndex]:], valueToReplace, strconv.Itoa(maxIndex), 1)
 		// fmt.Println("old line", l)
 		// fmt.Println("New line", input[lineIndex])
 	}
