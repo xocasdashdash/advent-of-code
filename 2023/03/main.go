@@ -54,6 +54,7 @@ func Part2(symbols []Symbol, pm map[Coord][]Part) int {
 					foundNeighbors[p.PartId()] = p
 					// If we found more than two neighbors already we can quit
 					if len(foundNeighbors) > 2 {
+						fmt.Println("More than two!")
 						break findingNeighbors
 					}
 				}
@@ -117,12 +118,14 @@ func parseInput(input []string) ([]Part, []Symbol) {
 		for x := 0; x < len(splitLine); x++ {
 
 			start := x
+			var end Coord
 		findingParts:
 			for x < len(splitLine) {
 				runes := []rune(splitLine[x])
 				if runes[0] == '.' {
 					break findingParts
 				} else if unicode.IsDigit(runes[0]) {
+					end = Coord{X: x, Y: y}
 					x++
 				} else {
 					// is a symbol
@@ -136,7 +139,7 @@ func parseInput(input []string) ([]Part, []Symbol) {
 			partNumber, _ := strconv.Atoi(strings.Join(splitLine[start:x], ""))
 			parts = append(parts, Part{
 				start:           Coord{X: start, Y: y},
-				end:             Coord{X: x - 1, Y: y},
+				end:             end,
 				PartNumber:      partNumber,
 				SymbolNeighbors: make([]Symbol, 0),
 			})
