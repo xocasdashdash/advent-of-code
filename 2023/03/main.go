@@ -24,8 +24,7 @@ func main() {
 		input = testInput
 	}
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
-	fmt.Println("Took", time.Since(start))
-
+	fmt.Println("File reading took", time.Since(start))
 	parts, symbols := parseInput(trimmedInput)
 	maxX := len(trimmedInput[0])
 	maxY := len(trimmedInput)
@@ -48,10 +47,15 @@ func Part2(symbols []Symbol, pm map[Coord][]Part) int {
 	gearRatio := 0
 	for _, s := range symbols {
 		foundNeighbors := make(map[string]Part, 0)
+	findingNeighbors:
 		for _, neighborCoord := range s.NeighborCoords() {
 			if parts, ok := pm[neighborCoord]; ok {
 				for _, p := range parts {
 					foundNeighbors[p.PartId()] = p
+					// If we found more than two neighbors already we can quit
+					if len(foundNeighbors) > 2 {
+						break findingNeighbors
+					}
 				}
 			}
 		}
@@ -168,18 +172,16 @@ type Symbol struct {
 
 func (s Symbol) NeighborCoords() []Coord {
 
-	// fmt.Println("neighbor for symbol", s)
 	result := make([]Coord, 0)
-	xmodS := []int{-1, 0, 1}
-	ymodS := []int{-1, 0, 1}
-	for _, xmod := range xmodS {
-		for _, ymod := range ymodS {
+	modifiers := []int{-1, 0, 1}
+
+	for _, xmod := range modifiers {
+		for _, ymod := range modifiers {
 			if xmod == 0 && ymod == 0 {
 				continue
 			}
 			result = append(result, Coord{X: s.Location.X + xmod, Y: s.Location.Y + ymod})
 		}
 	}
-	// fmt.Println("Neighbors for", s.Location, result)
 	return result
 }
