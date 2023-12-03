@@ -33,12 +33,14 @@ func main() {
 	end := time.Now()
 	fmt.Println("generating map took", end.Sub(start))
 	start = time.Now()
-	fmt.Println("part1", FindAndAddValidParts(symbols, pm))
+	p1 := FindAndAddValidParts(symbols, pm)
 	end = time.Now()
+	fmt.Println("part1", p1)
 	fmt.Println("part 1 took", end.Sub(start))
 	start = time.Now()
-	fmt.Println("part2", Part2(symbols, pm))
+	p2 := Part2(symbols, pm)
 	end = time.Now()
+	fmt.Println("part2", p2)
 	fmt.Println("part 2 took", end.Sub(start))
 
 }
@@ -46,6 +48,9 @@ func main() {
 func Part2(symbols []Symbol, pm map[Coord][]Part) int {
 	gearRatio := 0
 	for _, s := range symbols {
+		if s.Value != "*" {
+			continue
+		}
 		foundNeighbors := make(map[string]Part, 0)
 	findingNeighbors:
 		for _, neighborCoord := range s.NeighborCoords() {
@@ -53,8 +58,8 @@ func Part2(symbols []Symbol, pm map[Coord][]Part) int {
 				for _, p := range parts {
 					foundNeighbors[p.PartId()] = p
 					// If we found more than two neighbors already we can quit
-					if len(foundNeighbors) > 2 {
-						fmt.Println("More than two!")
+					if len(foundNeighbors) > 1 {
+						// fmt.Println("Found two")
 						break findingNeighbors
 					}
 				}
@@ -183,7 +188,15 @@ func (s Symbol) NeighborCoords() []Coord {
 			if xmod == 0 && ymod == 0 {
 				continue
 			}
-			result = append(result, Coord{X: s.Location.X + xmod, Y: s.Location.Y + ymod})
+			newX := s.Location.X + xmod
+			if newX < 0 {
+				continue
+			}
+			newY := s.Location.Y + ymod
+			if newY < 0 {
+				continue
+			}
+			result = append(result, Coord{X: newX, Y: newY})
 		}
 	}
 	return result

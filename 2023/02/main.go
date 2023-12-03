@@ -18,12 +18,14 @@ var testMode = flag.Bool("test", false, "Set to run using the testInput")
 
 func main() {
 	start := time.Now()
+	firstStart := start
 	flag.Parse()
 	if *testMode {
 		input = testInput
 	}
 	trimmedInput := strings.Split(strings.TrimSpace(string(input)), "\n")
 	fmt.Println("Took", time.Since(start))
+	start = time.Now()
 	games := parseGames(trimmedInput)
 	maxSet := Set{
 		blue:  14,
@@ -32,7 +34,13 @@ func main() {
 	}
 	validGames := validateGames(maxSet, games)
 	fmt.Println("P1", addGames(validGames))
+	end := time.Now()
+	fmt.Println("Took", end.Sub(start))
+	start = time.Now()
 	fmt.Println("P2", part2(games))
+	end = time.Now()
+	fmt.Println("Took", end.Sub(start))
+	fmt.Println("all", time.Since(firstStart))
 }
 
 func part2(games []Game) int {
