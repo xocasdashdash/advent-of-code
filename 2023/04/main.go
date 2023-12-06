@@ -27,10 +27,39 @@ func main() {
 	fmt.Println("Took", time.Since(start))
 
 	cards, winningNumbers := parseInput(trimmedInput)
-	totalPoints := calcTotalPoints(cards, winningNumbers)
+	totalPoints, cards := calcTotalPoints(cards, winningNumbers)
+
 	fmt.Println("Part 1", totalPoints)
+	d := NewDeck(cards)
+	fmt.Println("Part 2", playDeck(d).AddInstances())
+}
+func (d Deck) AddInstances() int {
+	result := 0
+	for _, v := range d.instances {
+		result += v
+	}
+	return result
 }
 
+func playDeck(d Deck) Deck {
+	cardArray := make([]Card, len(d.cards)+1)
+	for i := 0; i < len(d.cards); i++ {
+		cardArray[i+1] = d.cards[i]
+	}
+	for i, c := range cardArray {
+		if i == 0 {
+			continue
+		}
+		// Need to copy the value to avoid going into an infinite loop
+		numberOfInstances := d.instances[i]
+		for j := 0; j < numberOfInstances; j++ {
+			for k := i + 1; k <= i+c.matchingNumbers && k <= len(d.instances); k++ {
+				d.instances[k] = d.instances[k] + 1
+			}
+		}
+	}
+	return d
+}
 func intersectNumbers(a []int, b []int) []int {
 	result := make([]int, 0)
 
@@ -43,26 +72,48 @@ func intersectNumbers(a []int, b []int) []int {
 			result = append(result, n)
 		}
 	}
-	fmt.Println("intersection of ", a, b, "is", result)
+	// fmt.Println("intersection of ", a, b, "is", result)
 	return result
 }
-func calcTotalPoints(cards map[int]Card, winningNumbers [][]int) int {
+func calcTotalPoints(cards map[int]Card, winningNumbers [][]int) (int, map[int]Card) {
 	result := 0
-	for _, c := range cards {
+	updatedCards := cards
+	for k, c := range cards {
 		interSection := intersectNumbers(c.numbers, winningNumbers[c.index-1])
 		if len(interSection) == 0 {
 			continue
 		}
 		partialPoints := int(math.Pow(float64(2), float64(len(interSection)-1)))
+		c.matchingNumbers = len(interSection)
+		updatedCards[k] = c
 		result += partialPoints
-		fmt.Println("Card", c.index-1, "has this matches", interSection, partialPoints)
+		// fmt.Println("Card", c.index-1, "has this matches", interSection, partialPoints)
 	}
-	return result
+	return result, updatedCards
 }
 
 type Card struct {
-	index   int
-	numbers []int
+	index           int
+	numbers         []int
+	matchingNumbers int
+}
+
+type Deck struct {
+	cards     map[int]Card
+	instances map[int]int
+}
+
+func NewDeck(cards map[int]Card) Deck {
+	d := Deck{}
+	d.cards = cards
+	d.instances = make(map[int]int, len(cards))
+	for _, c := range cards {
+		d.instances[c.index] = 1
+	}
+	return d
+}
+func (d Deck) String() string {
+	return fmt.Sprintf("cards %+v, instances %+v", d.cards, d.instances)
 }
 
 func parseNumbers(input string) []int {
